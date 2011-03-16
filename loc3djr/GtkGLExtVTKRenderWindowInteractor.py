@@ -28,8 +28,6 @@ class GtkGLExtVTKRenderWindowInteractor(gtk.gtkgl.DrawingArea):
         gtk.gtkgl.DrawingArea.__init__(self)
 
         self.set_double_buffered(False)
-        #the below line used in view3 from eegview -eli
-        self.overlayRenderer = None
         
         self._RenderWindow = vtk.vtkRenderWindow()
 
@@ -144,6 +142,7 @@ class GtkGLExtVTKRenderWindowInteractor(gtk.gtkgl.DrawingArea):
 
     def OnButtonDown(self, wid, event):
         print "GtkGLExtVTKRenderWindowInteractor.OnButtonDown()"
+        """Mouse button pressed."""
         m = self.get_pointer()
         ctrl, shift = self._GetCtrlShift(event)
         self._Iren.SetEventInformationFlipY(m[0], m[1], ctrl, shift,
@@ -181,13 +180,7 @@ class GtkGLExtVTKRenderWindowInteractor(gtk.gtkgl.DrawingArea):
         return False
 
     def OnMouseMove(self, wid, event):
-        #here we have a hacky fix to make sure that the overlayrenderer in view3 doesn't move. is there ANY way to disable interact for a specific renderer in the render window? why the hell not? -eli
-        if self.overlayRenderer:
-            cam = self.overlayRenderer.GetActiveCamera()
-            cam.SetViewUp(0,1,0)
-            cam.SetFocalPoint(15.086358767571982, 4.6935338388001755, 0.0)
-            cam.SetPosition(15.086358767571982, 4.6935338388001755, 12.533026371713074)
-            self.Render()
+        """Mouse has moved."""
         m = self.get_pointer()
         ctrl, shift = self._GetCtrlShift(event)
         self._Iren.SetEventInformationFlipY(m[0], m[1], ctrl, shift,
