@@ -10,10 +10,12 @@ from GtkGLExtVTKRenderWindow import GtkGLExtVTKRenderWindow
 from scipy import array
 
 from pbrainlib.gtkutils import error_msg, simple_msg, ProgressBarDialog,\
-     str2posint_or_err, str2posnum_or_err, str2int_or_err, FileManager
+     str2posint_or_err, str2posnum_or_err, str2int_or_err
 from shared import shared
 
 import distutils.sysconfig
+
+from vtkNifti import vtkNiftiImageReader
 
 # We put all of our gtk signal handlers into a class.  This lets us bind
 # all of them at once, because their names are in the class dict.
@@ -25,7 +27,7 @@ class GladeHandlers:
     def on_buttonDir_clicked(button=None):
 
             
-        dialog = gtk.FileChooserDialog('Choose image file directory')
+        dialog = gtk.FileSelection('Choose image file directory')
         dialog.set_filename(shared.get_last_dir())
         dialog.set_transient_for(widgets['dlgReader'])
         dialog.set_filename(widgets['entryDir'].get_text())
@@ -43,24 +45,22 @@ class GladeHandlers:
            dialog.destroy()
 
     def on_buttonOpenInfo_clicked(button=None):
-	dialog = FileManager()
-	print shared.get_last_dir()
-	dialog.set_lastdir(shared.get_last_dir())        
-	fname = dialog.get_filename('Choose info file') #using gtkutils to modernize file dlg -eli
-        #dialog.set_transient_for(widgets['dlgReader'])
-        #dialog.set_filename(widgets['entryInfoFile'].get_text() or
-                            #shared.get_last_dir())
-        #response = dialog.run()
-        #fname = dialog.get_filename()
-        #dialog.destroy()
-        #if response == gtk.RESPONSE_OK:
-        if widgets.load_params_from_file(fname):
-	    GladeHandlers.__dict__['on_buttonPreview_clicked']()
-	    shared.set_file_selection(fname)
-    
-    def on_buttonSaveAsInfo_clicked(button=None):
+	
+        dialog = gtk.FileSelection('Choose info file')
+        dialog.set_transient_for(widgets['dlgReader'])
+        dialog.set_filename(widgets['entryInfoFile'].get_text() or
+                            shared.get_last_dir())
+        response = dialog.run()
+        fname = dialog.get_filename()
+        dialog.destroy()
+        if response == gtk.RESPONSE_OK:
+            if widgets.load_params_from_file(fname):
+                GladeHandlers.__dict__['on_buttonPreview_clicked']()
+                shared.set_file_selection(fname)
         
-        dialog = gtk.FileChooserDialog('Choose info file to save parameters to')
+    def on_buttonSaveAsInfo_clicked(button=None):
+            
+        dialog = gtk.FileSelection('Choose info file to save parameters to')
         dialog.set_transient_for(widgets['dlgReader'])
         dialog.set_filename(widgets['entryInfoFile'].get_text() or
                             shared.get_last_dir())
@@ -84,7 +84,7 @@ class GladeHandlers:
         print "type(pars)=", type(pars)
         pars = widgets.validate(pars)
         if pars is None: return
-        print "on_buttonPreview_clicked: pars = ", pars
+        #print "on_buttonPreview_clicked: pars = ", pars
         reader = widgets.get_reader(pars)
         inDim1, inDim2 = pars.dimensions
         print "on_buttonPreview_clicked(): pars.dimensions = ", pars.dimensions
@@ -99,7 +99,7 @@ class GladeHandlers:
         resample.SetInput(reader.GetOutput())
         resample.SetAxisMagnificationFactor(0, scale1)
         resample.SetAxisMagnificationFactor(1, scale2)
-        
+      
         widgets.viewer.SetInput(resample.GetOutput())
         widgets.preview.Render()
 
@@ -124,7 +124,9 @@ class GladeHandlers:
         else: otherSens = 0
         widgets['entryDim1'].set_sensitive(otherSens)
         widgets['entryDim2'].set_sensitive(otherSens)
+
     def on_radiobuttonBytes1_toggled(button=None):
+        #print "on_radiobuttonBytes1_toggled "+ str(button)
 
         # if BMP is on, turn of the vol16 widgets
         if widgets['radiobuttonBytes1'].get_active(): sens = 0
@@ -138,6 +140,28 @@ class GladeHandlers:
         widgets['labelHeader'].set_sensitive(sens)
         widgets['entryMask'].set_sensitive(sens)
         widgets['entryHeader'].set_sensitive(sens)
+
+    def on_radiobuttonBytes5_toggled(button=None):
+        # if BMP is on, turn of the vol16 widgets
+        if widgets['radiobuttonBytes5'].get_active(): sens = 0
+        else: sens = 1
+
+        group = widgets['radiobuttonOrderBig'].get_group()            
+        for b in group:
+            b.set_sensitive(sens)
+
+        widgets['labelMask'].set_sensitive(sens)
+        widgets['entryMask'].set_sensitive(sens)
+        widgets['labelHeader'].set_sensitive(sens)
+        widgets['entryHeader'].set_sensitive(sens)
+        #widgets['labelSpacing'].set_sensitive(sens)
+        #widgets['entrySpacing'].set_sensitive(sens)
+        #widgets['labelDFOV'].set_sensitive(sens)
+        #widgets['entryDFOV'].set_sensitive(sens)
+        #widgets['labelFirst'].set_sensitive(sens)
+        #widgets['entryFirst'].set_sensitive(sens)
+        #widgets['labelLast'].set_sensitive(sens)
+        #widgets['entryLast'].set_sensitive(sens)
 
     def on_hscrollbarColorWindow_value_changed(bar):        
         widgets.viewer.SetColorWindow(bar.get_value())
@@ -157,8 +181,11 @@ class WidgetsWrapper:
     gladeFile =  'image_reader.glade'
     def __init__(self):
     
+        #os.system("pwd")
         if os.path.exists(self.gladeFile):
             theFile = self.gladeFile
+        elif os.path.exists("gui/"+self.gladeFile):
+            theFile = "gui/"+self.gladeFile
         else:
             theFile = os.path.join(
                 distutils.sysconfig.PREFIX,
@@ -199,6 +226,8 @@ class WidgetsWrapper:
             readerClass = 'vtkImageReader2'
         elif widgets['radiobuttonBytes3'].get_active():
             readerClass = 'vtkDICOMImageReader'
+        elif widgets['radiobuttonBytes5'].get_active():
+            readerClass = 'vtkNiftiImageReader'
         else: readerClass = None
         if widgets['radiobuttonOrderBig'].get_active(): order = 'big endian'
         elif widgets['radiobuttonOrderLittle'].get_active(): order = 'little endian'
@@ -264,7 +293,9 @@ class WidgetsWrapper:
 
        print "WidgetsWrapper.set_params()!"
        
-       if o.readerClass=='vtkDICOMImageReader':
+       if o.readerClass=='vtkNiftiImageReader':
+            bytes2=3
+       elif o.readerClass=='vtkDICOMImageReader':
             bytes2=2
        elif o.readerClass=='vtkImageReader2':
             bytes2=1
@@ -283,7 +314,9 @@ class WidgetsWrapper:
        elif o.order == 'little endian':
           widgets['radiobuttonOrderLittle'].set_active(1)
 
-       if bytes2==2: #vtkDICOMImageReader
+       if bytes2==3: #vtkNiftiImageReader
+          widgets['radiobuttonBytes5'].set_active(1) 
+       elif bytes2==2: #vtkDICOMImageReader
           widgets['radiobuttonBytes3'].set_active(1) 
        elif bytes2==1: #vtkImageReader2
           widgets['radiobuttonBytes2'].set_active(1) 
@@ -319,15 +352,16 @@ class WidgetsWrapper:
     def validate(self, o):
         dlg = self['dlgReader']
 
-        if len(o.pattern)==0:
-            msg = 'You must supply a number pattern for entry %s.\n' % \
-                  self['labelPattern'].get_label() + 'Consider "%d"'
-            return error_msg(msg, dlg)
+        if o.readerClass!='vtkNiftiImageReader':
+            if len(o.pattern)==0:
+                msg = 'You must supply a number pattern for entry %s.\n' % \
+                      self['labelPattern'].get_label() + 'Consider "%d"'
+                return error_msg(msg, dlg)
 
-        if o.pattern[0]!='%':
-            msg = '%s format string must begin with a %%.\n' % \
-                  self['labelPattern'].get_label() + 'Consider "%d"'
-            return error_msg(msg, dlg)
+            if o.pattern[0]!='%':
+                msg = '%s format string must begin with a %%.\n' % \
+                      self['labelPattern'].get_label() + 'Consider "%d"'
+                return error_msg(msg, dlg)
 
         if widgets['radiobuttonDimOther'].get_active():
             dim1, dim2 = o.dimensions
@@ -337,24 +371,43 @@ class WidgetsWrapper:
             if val is None: return None
             o.dimensions = dim1, dim2
             
-            
         val = o.first = str2int_or_err(o.first, widgets['labelFirst'], dlg)
-        if val is None: return None
+        if val is None:
+            return None
 
         val = o.last = str2posint_or_err(o.last, widgets['labelLast'], dlg)
         if val is None: return None
 
-        fnames = self.get_file_names(o)
-        for fname in fnames:
-            print "validate(): doing fname ", fname
-            if not os.path.exists(fname):
-                return error_msg('Could not find file %s' % fname, dlg)
-            if o.readerClass=='vtkBMPReader':
-                reader = vtk.vtkBMPReader()
-                b = reader.CanReadFile(fname)
-                if not b:
-                    return error_msg('Could not read file %s with reader %s'
-                                     % (fname, o.readerClass), dlg)
+        if o.readerClass!='vtkNiftiImageReader':
+            fnames = self.get_file_names(o)
+            for fname in fnames:
+                print "validate(): doing fname ", fname
+                if not os.path.exists(fname):
+                    return error_msg('Could not find file %s' % fname, dlg)
+                if o.readerClass=='vtkBMPReader':
+                    reader = vtk.vtkBMPReader()
+                    b = reader.CanReadFile(fname)
+                    if not b:
+                        return error_msg('Could not read file %s with reader %s'
+                                         % (fname, o.readerClass), dlg)
+        else:
+            if len(o.extension) > 0:
+                fname=os.path.join(o.dir,o.pattern+"."+o.extension)
+                if not os.path.exists(fname):
+                    return error_msg('Could not find file %s' % fname, dlg)
+            else:
+                fname=o.pattern
+                files=os.listdir(o.dir)
+                match=False
+                for file in files:
+                    file=file.split(".")
+                    if len(file)>1:
+                        if file[0]==fname:
+                            if file[1] in ["nii","img","hdr"]:
+                                match=True
+                                break
+                if not match:
+                    return error_msg('Could not find file %s with extension nii, img, hdr [.gz]' % fname, dlg)
 
         # Depth Field Of View
         val = o.dfov = str2posnum_or_err(o.dfov, widgets['labelDFOV'], dlg)
@@ -432,6 +485,8 @@ def get_reader(o):
         ReaderClass = vtk.vtkImageReader2
     elif o.readerClass=='vtkDICOMImageReader':
         ReaderClass = vtk.vtkDICOMImageReader
+    elif o.readerClass=='vtkNiftiImageReader':
+        ReaderClass = vtkNiftiImageReader
     reader = ReaderClass()
     
     if ReaderClass==vtk.vtkImageReader2:
@@ -466,14 +521,25 @@ def get_reader(o):
         else:
             o.order=='little endian'
             
+        o.spacing = spc[2]
+        o.dfov    = o.dimensions[0] * spc[0]
+    elif ReaderClass==vtkNiftiImageReader:
+        reader.SetDirectoryName(o.dir)
+        pattern = o.pattern 
+        if len(o.extension) > 0:
+            pattern += '.' + o.extension
+        reader.SetFilePattern(pattern)
+        reader.Update()
+        o.dimensions = [reader.GetWidth() , reader.GetHeight()]
+
         spc = reader.GetDataSpacing()
         o.spacing = spc[2]
         o.dfov    = o.dimensions[0] * spc[0]
+        
     else:
         raise NotImplementedError, "Can't handle reader %s" % o.readerClass
 
-
-    if sys.platform != 'darwin':
+    if ReaderClass!=vtkNiftiImageReader:
         progressDlg = ProgressBarDialog(title='Loading files',
                                         parent=widgets['dlgReader'],
                                         msg='Almost there....',
@@ -487,8 +553,6 @@ def get_reader(o):
             progressDlg.bar.set_fraction(val)            
             if val==1: progressDlg.destroy()
             while gtk.events_pending(): gtk.main_iteration()
-
-
         reader.AddObserver('ProgressEvent', progress)
 
 
@@ -497,16 +561,19 @@ def get_reader(o):
        infopath = widgets['entryInfoFile'].get_text()
        dir, fname = os.path.split(infopath)
     
-    reader.SetFilePrefix(dir)
-    pattern = os.path.join( '%s', o.prefix + o.pattern )
-    if len(o.extension) > 0:
-        pattern += '.' + o.extension
-    reader.SetFilePattern(pattern)
-    print "reader.SetDataSpacing(", o.dfov/o.dimensions[0], o.dfov/o.dimensions[1], o.spacing , "). dfov=", o.dfov, "dimensions=", o.dimensions, "spacing=", o.spacing
-                          
-    reader.SetDataSpacing(o.dfov/o.dimensions[0],
-                          o.dfov/o.dimensions[1],
-                          o.spacing )
+    if ReaderClass!=vtkNiftiImageReader:
+        reader.SetFilePrefix(dir)
+        pattern = os.path.join( '%s', o.prefix + o.pattern )
+        if len(o.extension) > 0:
+            pattern += '.' + o.extension
+        reader.SetFilePattern(pattern)
+    
+        print "reader.SetDataSpacing(", o.dfov/o.dimensions[0], o.dfov/o.dimensions[1], o.spacing , "). dfov=", o.dfov, "dimensions=", o.dimensions, "spacing=", o.spacing
+                              
+       
+        reader.SetDataSpacing(float(o.dfov)/float(o.dimensions[0]),
+                              float(o.dfov)/float(o.dimensions[1]),
+                              float(o.spacing) )
     reader.Update()
     return reader
 
