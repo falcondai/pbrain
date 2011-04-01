@@ -40,6 +40,7 @@ from events import Observer
 from shared import fmanager, eegviewrc
 from gladewrapper import PrefixWrapper
 from utils import filter_grand_mean
+from coh_explorer import CohExplorer
 
 from matplotlib import rcParams
 
@@ -197,6 +198,7 @@ class EEGNavBar(gtk.Toolbar, Observer):
         Observer.__init__(self)
         self.win = win
         self.eegplot = eegplot
+        
         iconSize = gtk.ICON_SIZE_SMALL_TOOLBAR
         self.set_border_width(5)
         self.set_style(gtk.TOOLBAR_ICONS)
@@ -223,7 +225,9 @@ class EEGNavBar(gtk.Toolbar, Observer):
         #the above was not important enough to keep right now -eli
         self.add_toolbutton(gtk.STOCK_JUMP_TO, 'Automatically page the EEG', 'Private', self.auto_play)
         self.add_toolbutton(gtk.STOCK_SAVE, 'Save the figure', 'Private', self.save_figure)
-
+        
+        
+        self.add_toolbutton(gtk.STOCK_JUMP_TO, 'Open Coh Explr', 'Private', self.load_cohexplr)
         self.add_separator()
 
         def toggled(button):
@@ -231,6 +235,8 @@ class EEGNavBar(gtk.Toolbar, Observer):
 
         def lock_trode_toggled(button) :
             self.broadcast(Observer.LOCK_TRODE_TOGGLED, button)
+
+        
 
         self.buttonGM = gtk.CheckButton('GM')
         self.buttonGM.show()
@@ -277,6 +283,9 @@ class EEGNavBar(gtk.Toolbar, Observer):
 
         dlg = AutoPlayDialog(0, self.eegplot.eeg.get_tmax(), twidth)
         dlg.show()
+        
+    def load_cohexplr(self, *args):
+        self.eegplot.load_cohexplr()
             
     def specify_range(self, *args):
 
@@ -791,7 +800,7 @@ class EEGPlot(Observer):
 
         amp = eeg.get_amp()
         eoi = amp.to_eoi()
-
+        
         self.colord = {}
         colorInd = 0
 
@@ -880,6 +889,10 @@ class EEGPlot(Observer):
             
     def draw(self):
         self.canvas.draw()
+
+    def load_cohexplr(self):
+        ce = CohExplorer(self.eoi, self.eeg.freq)
+        ce.show()
 
     def get_selected(self, filtergm=False):
         'return t, data[ind], trode'
