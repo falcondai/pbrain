@@ -202,7 +202,7 @@ class View3(gtk.Window, Observer):
         
         #make a time display actor
         timedisplay = vtk.vtkCornerAnnotation()
-        timedisplay.SetText(0, "t = 0")
+        timedisplay.SetText(0, "t = %3.2f" %(self.xmin/1000))
         self.timedisplay = timedisplay
         self.renderer.AddActor(self.timedisplay)
         
