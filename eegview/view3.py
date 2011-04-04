@@ -1560,7 +1560,7 @@ class View3(gtk.Window, Observer):
             tmin, tmax = setTime
         print "VIEW3.compute_coherence offset: ", self.offset
         #set up the time display - only works for new coh calc functions?
-        self.timedisplay.SetText(0, "t = %3.2f" %((self.offset/self.eeg.freq) - (self.xmin/self.eeg.freq)))
+        self.timedisplay.SetText(0, "t = %3.2f" %((self.offset/self.eeg.freq) + (self.xmin/1000)))
 
         #if we call this function without changing time limits, and the coherence is already calculated, don't do it again!
         if self.cohCache is not None:
