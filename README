@@ -14,7 +14,7 @@ See http://nipy.sourceforge.net/pbrain for the introductory docs.
 You may well want the example CT and EEG data at http://nipy.sourceforge.net/example_data 
 
 system requirements:
-matplotlib > .9
+
 numpy
 scipy
 gtk > 2
@@ -24,7 +24,13 @@ python 2.6
 gtkgl
 pygtkgl
 mysqldb
+python-all-dev
+zlib (and its dev package)
+freetype (and its dev package)
+libpng (and its dev package)
+matplotlib > .9
 
+note: matplotlib needs to be downloaded and built from source, follows the standard setup.py build/install pattern, and needs to be installed last.
 
 to install:
 type the following in your bash terminal from this directory:
