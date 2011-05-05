@@ -130,7 +130,7 @@ class ArrayMapper(gtk.Window, ScalarMapper, Observer):
         val = self.scrollbarIndex.get_value()
         if (self.time_in_secs == True):
             val = (val*self.view3.eeg.freq)/1000 #convert val to points
-        self.view3.offset = val - self.view3.newLength/2 #set the new view3 offset to the beginning of the window
+        self.view3.offset = int(val - self.view3.newLength/2) #set the new view3 offset to the beginning of the window
         self.view3.compute_coherence()
         self.view3.plot_band()
         #I know I should be using the receiver. I really dislike that interface tho, so for now I'll be raw about it, until we get a better one.
