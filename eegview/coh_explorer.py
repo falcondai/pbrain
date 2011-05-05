@@ -35,7 +35,7 @@ class CohExplorer(gtk.Window, Observer):
         self.channels = eoi
         self.eegfreq = freq
         self.datares = 0
-        self.fig = Figure(figsize=(15,15), dpi=72)
+        self.fig = Figure(figsize=(15,15), dpi=72, facecolor='black')
         self.canvas = FigureCanvas(self.fig)  # a gtk.DrawingArea
         self.canvas.show()
         self.canvas.mpl_connect('motion_notify_event', self.motion_notify_event)
