@@ -58,7 +58,7 @@ from scipy import mean, std
 
 from loc3djr.GtkGLExtVTKRenderWindowInteractor import GtkGLExtVTKRenderWindowInteractor
 from loc3djr.plane_widgets import PlaneWidgetsXYZ 
-
+import matplotlib
 from matplotlib.cbook import exception_to_str
 from matplotlib.mlab import detrend_none, detrend_mean, detrend_linear,\
      window_none, window_hanning, log2
@@ -131,6 +131,8 @@ class View3(gtk.Window, Observer):
         """
         print "View3.__init__()"
         gtk.Window.__init__(self)
+
+	matplotlib.rcParams['figure.facecolor'] = 'black'
 
         self.ok = False  # do not show if false
         
