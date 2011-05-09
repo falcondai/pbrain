@@ -8,7 +8,7 @@ from matplotlib.cbook import iterable, Bunch
 from pbrainlib.mlab import cohere_pairs, fftsurr, window_hanning as hanning
 from math import floor, ceil
 from numpy import mean #changed from scipy mean. don't think it makes a difference except with multivariate arrays in which case, be careful.
-
+import numpy as np
 from scipy import zeros, ones, exp, array, pi
 from scipy import array, arange, std, rand
 
@@ -795,7 +795,10 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     if eoiPairs is None:
         eoiPairs = all_pairs_eoi( amp.to_eoi() )
 
-
+    print "COHERE_PAIRS_EEG: ", offset 
+    offset = int(offset)
+    print "COHERE_PAIRS_EEG: ", offset 
+    
     m = amp.get_electrode_to_indices_dict()
     ij = [ (m[e1], m[e2]) for e1, e2 in eoiPairs]
     ij.sort()

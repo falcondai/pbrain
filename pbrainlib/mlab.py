@@ -594,6 +594,7 @@ def cohere_pairs( X, ij, newLength = 256, NFFT=256, offset = 0, Fs=2, detrend=de
 
     #basically we've replaced the nfft by the shorter length, but we'll maintain it down below for one thing - epoch definitions
     print "mlab nfft! ", NFFT, newLength
+    np.seterr(all = 'raise')
     #NFFT = 3584 #no longer hardcoded in, hurrah
     oldNFFT = NFFT
     NFFT = newLength
@@ -631,7 +632,7 @@ def cohere_pairs( X, ij, newLength = 256, NFFT=256, offset = 0, Fs=2, detrend=de
     #print windowVals
     #original ind setting:
     #ind = range(0, numRows-oldNFFT+1, oldNFFT-noverlap) #note variable change to oldnfft
-    ind = range(offset, numRows-newLength+1, oldNFFT-noverlap) #coherence calcs on each sweep start at offset
+    ind = range(offset, int(numRows-newLength+1), int(oldNFFT-noverlap)) #coherence calcs on each sweep start at offset
     print "INDTEST: ", ind
     numSlices = len(ind)
     FFTSlices = {}
