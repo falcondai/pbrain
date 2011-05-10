@@ -1,7 +1,7 @@
 import os
 
 class Shared(object):
-    lastSel = '/data/patients/'
+    lastSel = ''
     #lastSel = os.getcwd() + os.sep
     def set_file_selection(self, name):
         """

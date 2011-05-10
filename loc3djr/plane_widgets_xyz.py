@@ -33,7 +33,7 @@ class PlaneWidgetsXYZ(MarkerWindowInteractor):
     """
         
     def __init__(self, imageData=None):
-        MarkerWindowInteractor.__init__(self) #does this really just control the markers or is it for the other frames too?
+        MarkerWindowInteractor.__init__(self)
 
         print "PlaneWidgetsXYZ.__init__()"
 
@@ -43,7 +43,7 @@ class PlaneWidgetsXYZ(MarkerWindowInteractor):
         self.sharedPicker = vtk.vtkCellPicker()
         #self.sharedPicker.SetTolerance(0.005)
         self.SetPicker(self.sharedPicker)
-        #initialize all three axes slice objects on the bottom of the window
+        
         self.pwX = vtk.vtkImagePlaneWidget()
         self.pwY = vtk.vtkImagePlaneWidget()
         self.pwZ = vtk.vtkImagePlaneWidget()
@@ -139,12 +139,12 @@ class PlaneWidgetsXYZ(MarkerWindowInteractor):
             self.remove_marker(marker)
         elif event=='color marker':
             marker, color = args
-	    #print "****update viewer in plane_widgets_xyz", color
             marker.set_color(color)
         elif event=='label marker':
             marker, label = args
             marker.set_label(label)
             
+            print "Create VTK-Text", marker.get_label()
             text = vtk.vtkVectorText()
             text.SetText(marker.get_label())
             textMapper = vtk.vtkPolyDataMapper()
@@ -220,8 +220,10 @@ class PlaneWidgetsXYZ(MarkerWindowInteractor):
         textActor.SetCamera(self.camera)
         textActor.GetProperty().SetColor(marker.get_label_color())
         if EventHandler().get_labels_on():
+            print "VisibilityOn"
             textActor.VisibilityOn()
         else:
+            print "VisibilityOff"
             textActor.VisibilityOff()
 
 
@@ -236,7 +238,7 @@ class PlaneWidgetsXYZ(MarkerWindowInteractor):
 
     def _plane_widget_boilerplate(self, pw, key, color, index, orientation):
 
-        print "PlaneWidgetsXYZ._plane_widget_boilerplate(", orientation, ")"
+        print "PlaneWidgetsXYZ._plane_widget_boilerplate(", index , orientation,")"
         pw.TextureInterpolateOn()
         #pw.SetResliceInterpolateToCubic()
         pw.SetKeyPressActivationValue(key)
@@ -311,7 +313,7 @@ class PlaneWidgetsXYZ(MarkerWindowInteractor):
     def OnButtonUp(self, wid, event):
         """Mouse button released."""
         
-        #print "PlaneWidgetsXYZ.OnButtonUp(): event=", event
+        print "PlaneWidgetsXYZ.OnButtonUp(): event=", event
 
         if not hasattr(self, 'lastPntsXYZ'): return
         MarkerWindowInteractor.OnButtonUp(self, wid, event)

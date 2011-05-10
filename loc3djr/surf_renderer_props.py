@@ -86,10 +86,21 @@ class SurfRendererProps(gtk.Window, Viewer):
 
     def key_press(self, interactor, event):
         key = interactor.GetKeySym()
-        if self.pickerName is None:
-            error_msg('You must select the pick segment in the Picker tab')
-            return
+        #XXX this is annoying in dwm (and probably elsewhere)
+        #if self.pickerName is None:
+            #error_msg('You must select the pick segment in the Picker tab')
+            #return
+        def checkPickerName():
+            if self.pickerName is None:
+                error_msg('You must select the pick segment in the Picker tab')
+                return False
+            return True
+
+        if key.lower()=='q': #hehehe
+            gtk.main_quit()
         if key.lower()=='i':
+            if not checkPickerName():
+                return
             print "Inserting Marker"
             x,y = interactor.GetEventPosition()
             picker = vtk.vtkCellPicker()
@@ -103,12 +114,13 @@ class SurfRendererProps(gtk.Window, Viewer):
             if numPoints<1: return
             pnt = points.GetPoint(0)
 
-
             marker = Marker(xyz=pnt,
                             rgb=EventHandler().get_default_color())
 
             EventHandler().add_marker(marker)
         elif key.lower()=='x':
+            if not checkPickerName():
+                return
             x,y = interactor.GetEventPosition()
             picker = vtk.vtkCellPicker()
             picker.PickFromListOn()
@@ -123,8 +135,9 @@ class SurfRendererProps(gtk.Window, Viewer):
                 o = self.paramd.values()[0]
                 o.remove.RemoveCell(cellId)
                 interactor.Render()
-
         elif key.lower()=='e':
+            if not checkPickerName():
+                return
             o = self.paramd.values()[0]
             pw = o.planeWidget
             if pw.GetEnabled():

@@ -18,7 +18,7 @@ from shared import shared
 class SurfRenderWindow(GtkGLExtVTKRenderWindowInteractor, Viewer):
     """
     CLASS: SurfRenderWindow
-    DESCR: Upper right frame in loc3djr window - for the markers and later the surface renderings
+    DESCR: Upper right frame in loc3djr window
     """
 
     def __init__(self, imageData=None):
@@ -31,6 +31,11 @@ class SurfRenderWindow(GtkGLExtVTKRenderWindowInteractor, Viewer):
         
         self.renderer = vtk.vtkRenderer()
         self.renWin = self.GetRenderWindow()
+
+        #XXX XXX XXX my anaglyph stuff
+        #self.renWin.SetStereoRender(1)
+        #self.renWin.SetStereoTypeToRedBlue()
+
         self.renWin.AddRenderer(self.renderer)
         self.interactor = self.renWin.GetInteractor()
         self.renderer.SetBackground(0,0,0)

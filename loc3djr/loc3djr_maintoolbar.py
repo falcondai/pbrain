@@ -3,9 +3,10 @@ import os
 from shared import shared
 from vtksurface import VTKSurface
 
-from pbrainlib.gtkutils import MyToolbar, FileManager, error_msg
-from image_reader import widgets, GladeHandlers
+from pbrainlib.gtkutils import MyToolbar, error_msg
+from image_reader import widgets, GladeHandlers, Params
 from events import EventHandler, UndoRegistry, Viewer
+from vtkNifti import vtkNiftiImageReader
 
 from afni_read import afni_header_read
 
@@ -19,10 +20,10 @@ class MainToolbar(MyToolbar):
 
     toolitems = (
         ('CT Info', 'Load new 3d image', gtk.STOCK_NEW, 'load_image'),
-        #('MRI Info', 'Load new 3d MRI', gtk.STOCK_NEW, 'load_mri'),
+        ('MRI Info', 'Load new 3d MRI', gtk.STOCK_NEW, 'load_mri'),
         ('Load VTK File', 'Load new VTK mesh', gtk.STOCK_NEW, 'load_vtk'),
         ('Load Registration file', 'Load .reg file', gtk.STOCK_NEW, 'load_registration'),
-        ('Load Markers', 'Load markers from file', gtk.STOCK_OPEN, 'load_from'),
+        ('Markers', 'Load markers from file', gtk.STOCK_OPEN, 'load_from'),
         ('Save', 'Save markers', gtk.STOCK_SAVE, 'save'),
         ('Save as ', 'Save markers as new filename', gtk.STOCK_SAVE_AS, 'save_as'),
         ('Save registration as', 'Save registration as new filename', gtk.STOCK_SAVE_AS, 'save_registration_as'),
@@ -42,6 +43,7 @@ class MainToolbar(MyToolbar):
         MyToolbar.__init__(self)
 
         self.owner = owner
+        self.niftiFilename=None
 
         # set the default color
         da = gtk.DrawingArea()
@@ -64,7 +66,7 @@ class MainToolbar(MyToolbar):
 
 
     def show_correlation_props(self, button):
-        dialog = gtk.FileChooserDialog('Choose filename for correlation data')
+        dialog = gtk.FileSelection('Choose filename for correlation data')
         dialog.set_filename(shared.get_last_dir())
 
         dialog.show()
@@ -223,38 +225,99 @@ class MainToolbar(MyToolbar):
         self.propDialog.show()
 
     def load_mri(self, *args):
-        # XXX: not currently used
-        dialog = gtk.FileSelection('Choose .HEAD file')
-        dialog.set_transient_for(widgets['dlgReader'])
-        dialog.set_filename(widgets['entryInfoFile'].get_text() or
-                            shared.get_last_dir())
-        response = dialog.run()
-        fname = dialog.get_filename()
-        dialog.destroy()
-        if response == gtk.RESPONSE_OK:
-            d = afni_header_read(fname)
-            brik_dimensions = d['DATASET_DIMENSIONS']
-            print "header.ORIGIN: ", d['ORIGIN']
-            print "header.DATASET_DIMENSIONS: ", d['DATASET_DIMENSIONS']
-            print "header.HISTORY_NOTE: ", d['HISTORY_NOTE']
-            print "header.DELTA: ", d['DELTA']
-            brik_xdim = brik_dimensions[0]
-            brik_ydim = brik_dimensions[1]
-            brik_zdim = brik_dimensions[2]
+        print "loc3djr_maintoolbar.load_mri()"
+        if self.niftiFilename is not None:
+            fname=self.niftiFilename
+        else:
+            dialog = gtk.FileSelection('Choose nifti file')
+            dialog.set_transient_for(widgets['dlgReader'])
+            dialog.set_filename(shared.get_last_dir())
+            response = dialog.run()
+            fname = dialog.get_filename()
+            dialog.destroy()
+            if response == gtk.RESPONSE_OK:
+                print fname
+            else:
+                return
+        #reader = vtkNiftiImageReader()
+        #reader.SetFileName(fname)
+        #reader.Update()
 
-            print fname
-            base, ext = os.path.splitext(fname)
-            brik_fname= "%s.BRIK" % base
-            brikfile = file(brik_fname)
-            brikfile.seek(0,2)
-            brikfile_length = brikfile.tell()
-            print "brikfile_length is " , brikfile_length, "divided by xdim*ydim is " , (float(brikfile_length))/(float(brik_xdim)*float(brik_ydim))
-            print brikfile
+        pars = Params()
+        
+        if fname.endswith(".nii.gz"):
+            pars.extension=".".join(fname.split(".")[-2:])
+            pars.pattern=".".join(fname.split(os.path.sep)[-1].split(".")[:-2])
+        #elif fname.endswith(".nii"):
+        #    pars.extension=".nii"
+        else: 
+            pars.extension=".".join(fname.split(".")[-1:])
+            pars.pattern=".".join(fname.split(os.path.sep)[-1].split(".")[:-1])
+        print "pars.extension", pars.extension
+        
+        print "pars.pattern", pars.pattern
+        pars.dir=os.path.dirname(fname)#sep.join(fname.split(os.path.sep)[:-1])
+        print "pars.dir", pars.dir
+
+        pars.readerClass='vtkNiftiImageReader'
+        reader=widgets.get_reader(pars)
+        pars.first=1
+        pars.last=reader.GetDepth()
+
+        print "reader=", reader
+        if not reader:
+            print "hit cancel, see if we can survive"
+        else:
+            pars=widgets.get_params()
+            pars=widgets.validate(pars)
+
+            imageData = reader.GetOutput()
+
+            #stupid workaround, somehow imageData.Extent is not written. dunno why
+            #maybe its in vtkImageImportFromArray
+            imageData.SetExtent(reader.GetDataExtent())
+          
+            print "loc3djr_maintoolbar.load_mri(): reader.GetOutput() is " , imageData
+            print "load_mri(): imageData.SetSpacing(", reader.GetDataSpacing(), " )"
+            imageData.SetSpacing(reader.GetDataSpacing())
+            print "calling EventHandler().notify('set image data', imageData)"
+            EventHandler().notify('set image data', imageData)
+            print "calling EventHandler().setNifti()"
+            EventHandler().setNifti(reader.GetQForm(),reader.GetDataSpacing())
+
+        ### #  not currently used
+        ###dialog = gtk.FileSelection('Choose .HEAD file')
+        ###dialog.set_transient_for(widgets['dlgReader'])
+        ###dialog.set_filename(widgets['entryInfoFile'].get_text() or
+        ###                    shared.get_last_dir())
+        ###response = dialog.run()
+        ###fname = dialog.get_filename()
+        ###dialog.destroy()
+        ###if response == gtk.RESPONSE_OK:
+        ###    d = afni_header_read(fname)
+        ###    brik_dimensions = d['DATASET_DIMENSIONS']
+        ###    print "header.ORIGIN: ", d['ORIGIN']
+        ###    print "header.DATASET_DIMENSIONS: ", d['DATASET_DIMENSIONS']
+        ###    print "header.HISTORY_NOTE: ", d['HISTORY_NOTE']
+        ###    print "header.DELTA: ", d['DELTA']
+        ###    brik_xdim = brik_dimensions[0]
+        ###    brik_ydim = brik_dimensions[1]
+        ###    brik_zdim = brik_dimensions[2]
+
+        ###    print fname
+        ###    base, ext = os.path.splitext(fname)
+        ###    brik_fname= "%s.BRIK" % base
+        ###    brikfile = file(brik_fname)
+        ###    brikfile.seek(0,2)
+        ###    brikfile_length = brikfile.tell()
+        ###    print "brikfile_length is " , brikfile_length, "divided by xdim*ydim is " , (float(brikfile_length))/(float(brik_xdim)*float(brik_ydim))
+        ###    print brikfile
 
             
     def load_vtk(self, *args):
         
         dialog = gtk.FileSelection('Choose .vtk file')
+        dialog.set_filename(shared.get_last_dir())
         dialog.set_transient_for(widgets['dlgReader'])
         dialog.set_filename(widgets['entryInfoFile'].get_text() or
                             shared.get_last_dir())
@@ -317,7 +380,10 @@ class MainToolbar(MyToolbar):
             imageData.SetSpacing(reader.GetDataSpacing())
             print "calling EventHandler().notify('set image data', imageData)"
             EventHandler().notify('set image data', imageData)
-            
+            if type(reader) == vtkNiftiImageReader:
+                print "calling EventHandler().setNifti()"
+                #XXX EventHandler().setNifti(reader.GetFilename())
+                EventHandler().setNifti(reader.GetQForm())
 
     def save_as(self, button):
 
@@ -379,26 +445,26 @@ class MainToolbar(MyToolbar):
         else: EventHandler().save_markers_as(self.fileName)
 
     def load_from(self, button):
-	dialog = FileManager() #modernizing the dialog box
-	dialog.set_lastdir(shared.get_last_dir())	
-	fname = dialog.get_filename('Choose filename for marker info')
-        #dialog = gtk.FileSelection()
+
+        dialog = gtk.FileSelection('Choose filename for marker info')
+        dialog.set_filename(shared.get_last_dir())
+
+        dialog.show()        
+        response = dialog.run()
         
-        #dialog.show()        
-        #response = dialog.run()
-        
-        #if response==gtk.RESPONSE_OK:
-        #    fname = dialog.get_filename()
-        #    dialog.destroy()
-        try: EventHandler().load_markers_from(fname)
-        except IOError:
-            error_msg(
-                'Could not load markers from %s' % fname, 
-                )
-        else:
-            shared.set_file_selection(fname)
-            self.fileName = fname
-        #else: dialog.destroy()
+        if response==gtk.RESPONSE_OK:
+            fname = dialog.get_filename()
+            dialog.destroy()
+            try: EventHandler().load_markers_from(fname)
+            except IOError:
+                error_msg(
+                    'Could not load markers from %s' % fname, 
+                    )
+            
+            else:
+                shared.set_file_selection(fname)
+                self.fileName = fname
+        else: dialog.destroy()
         
 
     def choose_color(self, button):
@@ -416,13 +482,12 @@ class MainToolbar(MyToolbar):
         if response == gtk.RESPONSE_OK:
             color = colorsel.get_current_color()
             self.lastColor = color
-            EventHandler().set_default_color(self.get_normed_rgb(color)) #DEBUG
+            EventHandler().set_default_color(self.get_normed_rgb(color))
+            
         dialog.destroy()
-	print "******************", EventHandler().get_default_color()
 
     def get_normed_rgb(self, c):
-        color = map(lambda x: x/65536.0, (float(c.red), float(c.green), float(c.blue))) #fixed color bug by switching to floats -eli
-	#print "this should be a decimal between 0 and 1", color
-	return color
+        return map(lambda x: x/65535, (c.red, c.green, c.blue))
+
 
 
