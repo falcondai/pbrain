@@ -88,24 +88,28 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=2, progr
     if newLength > oldNFFT: #make sure that the newlength is shorter than the segment (epoch) length (see below)
         newLength = oldNFFT
     slices = range(numSlices)
-    normVal = np.linalg.norm(windowVals)**2
+    # normVal = np.linalg.norm(windowVals)**2
 
     for iCol in allColumns:
         progressCallback(i/Ncols, 'Cacheing FFTs')
-        Slices = np.zeros( (numSlices,numFreqs), dtype=np.complex_)
+        Slices = np.zeros( (numSlices, newLength))
         for iSlice in slices:
             #thisSlice = X[ind[iSlice]:ind[iSlice]+NFFT, iCol] #this is the line that reads the data normally
             thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, iCol] #this is the line that reads sections of epochs
             print "GRANGER TESTING: ", ind[iSlice], " to ", ind[iSlice] + newLength
+            print "shape of all: ", Slices.shape
+            print "shape of slice: ", thisSlice.shape
             #thisSlice = windowVals*detrend(thisSlice)
-            Slices[iSlice,:] = thisSlice # = np.fft.fft(thisSlice)[:numFreqs]
+            Slices[iSlice] = thisSlice # = np.fft.fft(thisSlice)[:numFreqs]
         #FFTSlices[iCol] = Slices
-        Pxx[iCol] = Slices # np.mean((abs(Slices)**2),axis=0) / normVal
-
+        Pxx[iCol] = np.mean(Slices,axis=0) # / normVal
+        print "shape of pxx one col: ", Pxx[iCol].shape
+        # print Pxx[iCol]
     del Slices, ind, windowVals
     Cxy = {}
     Phase = {}
     count = 0
+    normArr = np.zeros(len(ij))
     N = len(ij)
     for i,j in ij:
         count += 1
@@ -114,10 +118,18 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=2, progr
         
         d = np.vstack((Pxx[i],Pxx[j])).T
         res = gtest.grangercausalitytests(d,maxlag,verbose=False)
+        normArr[count-1] = res[maxlag][0]['lrtest'][0]
         print "RESIS: ", res
         Cxy[i,j] = res[maxlag][0]['lrtest'][0]
-        print "FIRSTRES!", Cxy[i,j]
+        #print "FIRSTRES!", Cxy[i,j]
         Phase[i,j] = res[maxlag][0]['lrtest'][1]
+
+        
+    CxyStd = np.std(normArr)
+    print "standarddev", CxyStd
+    for i,j in ij:
+        Cxy[i,j] = Cxy[i,j]/CxyStd
+
     print "NFFT, NUMFREQS: ", NFFT, numFreqs
     freqs = Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
