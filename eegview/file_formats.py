@@ -23,8 +23,6 @@ import datetime
 
 from scipy import zeros, array
 
-import re
-
 def mask(charlist):
         """Construct a mask suitable for string.translate,
         which marks letters in charlist as "t" and ones not as "b" """

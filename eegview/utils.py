@@ -11,6 +11,7 @@ from numpy import mean #changed from scipy mean. don't think it makes a differen
 import numpy as np
 from scipy import zeros, ones, exp, array, pi
 from scipy import array, arange, std, rand
+import granger
 
 import scipy.signal
 
@@ -326,7 +327,7 @@ def cohere_array_to_dict(a, keys):
 
 
 def cohere_bands(cxy, phase, freqs, keys,
-                 bands = ( (1,4), (4,8), (8,12), (12,30), (30,55) ),
+                 bands = ( (1,4), (4,8), (8,12), (12,30), (30,55) ), granger=False,
                  progressCallback=donothing_callback):
 
     """
@@ -381,11 +382,21 @@ def cohere_bands(cxy, phase, freqs, keys,
         count = 0
         for inds, inde in ind:
             if inds==inde:
-                ac[count]=thisCxy[inds]
-                ap[count]=thisPhase[inds]
+                if not granger:
+                    ac[count]=thisCxy[inds]
+                    ap[count]=thisPhase[inds]
+                else:
+                    ac[count]=thisCxy
+                    ap[count]=thisPhase
+                    
             else:
-                ac[count] = mean(thisCxy[inds:inde])
-                ap[count] = mean(thisPhase[inds:inde])
+                if not granger:
+                    ac[count] = mean(thisCxy[inds:inde])
+                    ap[count] = mean(thisPhase[inds:inde])
+                else:
+                    ac[count]=thisCxy
+                    ap[count]=thisPhase
+
             count += 1
         cxyAvg[key] = ac
         phaseAvg[key] = ap
@@ -726,7 +737,7 @@ def get_best_exp_params(x, y, guess=(1.0, -.5, 0.0)):
 
 
 def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, indMax=None,
-                      data=None, returnPxx=False, **kwargs):
+                      data=None, returnPxx=False, granger_on = False, **kwargs):
     """
     FUNC: cohere_pairs_eeg
     DESCR: Cxy, Phase, freqs = cohere_pairs_eeg(  ...)
@@ -791,19 +802,18 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     print "utils.cohere_pairs_eeg: eeg.freq: ", eeg.freq   
     
     amp = eeg.get_amp()
-    print "UTILS AMP: ", amp
+    #print "UTILS AMP: ", amp
     if eoiPairs is None:
         eoiPairs = all_pairs_eoi( amp.to_eoi() )
 
-    print "COHERE_PAIRS_EEG: ", offset 
     offset = int(offset)
-    print "COHERE_PAIRS_EEG: ", offset 
+    print "COHERE_PAIRS_EEG: int offset: ", offset 
     
     m = amp.get_electrode_to_indices_dict()
     ij = [ (m[e1], m[e2]) for e1, e2 in eoiPairs]
     ij.sort()
         
-    print len(ij), len(eoiPairs)
+    print "COHERE_PAIRS EEG PAIRS LENGTH: ", len(ij), len(eoiPairs)
 
     if data is None: data = eeg.data
 
@@ -811,16 +821,19 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
-    if returnPxx:
-        try:
-            Cxy, Phase, freqs, Pxx = cohere_pairs(
-                X, ij, newLength, NFFT, offset, Fs=eeg.freq, returnPxx=True, **kwargs)
-        except OverflowError, overflowerror:
-            print "cohere_pairs_eeg(): caught overflow error!! bailing: ", overflowerror
-            
+    if granger_on:
+        Cxy, Phase, freqs = granger.granger_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=2)
     else:
-        Cxy, Phase, freqs = cohere_pairs(
-            X, ij, newLength, NFFT, offset, Fs=eeg.freq, **kwargs)
+        if returnPxx:
+            try:
+                Cxy, Phase, freqs, Pxx = cohere_pairs(
+                    X, ij, newLength, NFFT, offset, Fs=eeg.freq, returnPxx=True, **kwargs)
+            except OverflowError, overflowerror:
+                print "cohere_pairs_eeg(): caught overflow error!! bailing: ", overflowerror
+            
+        else:
+            Cxy, Phase, freqs = cohere_pairs(
+                X, ij, newLength, NFFT, offset, Fs=eeg.freq, **kwargs)
 
     seen = {}
     keys = Cxy.keys()

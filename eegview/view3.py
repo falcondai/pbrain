@@ -1545,7 +1545,7 @@ class View3(gtk.Window, Observer):
             
     #COMPUTE COHERENCE: CALLED BY RECIEVE: SET_TIME_LIM
     #args are min and max time
-    def compute_coherence(self, setTime=None, *args):
+    def compute_coherence(self, setTime=None, granger=False, *args):
         #code for view3 progressbar on the right
         if sys.platform == 'darwin':
             def progress_callback(frac,  msg):
@@ -1574,6 +1574,7 @@ class View3(gtk.Window, Observer):
                 self.pxxResults = pxxRes
                 return
 
+	granger = True
         
         eeg = self.eegplot.get_eeg()
         #dt is not used right now. le sigh.
@@ -1608,6 +1609,7 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=True,
+		granger_on = granger
             )
             pxxBand = power_bands(Pxx, freqs, bands)
             self.pxxResults = pxxBand
@@ -1625,13 +1627,14 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=False,
+		granger_on = granger
             )
             self.pxxResults = None
         
         
         cxyBands, phaseBands = cohere_bands(
-            Cxy, Phase, freqs, self.eoiPairs, bands,
-            progressCallback=progress_callback,
+            Cxy, Phase, freqs, self.eoiPairs, bands, granger,
+            progressCallback=progress_callback
             )
         self.cohereResults  = freqs, cxyBands, phaseBands
         self.broadcast(Observer.COMPUTE_COHERENCE,

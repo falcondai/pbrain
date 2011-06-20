@@ -297,38 +297,7 @@ class EEGNavBar(gtk.Toolbar, Observer):
         self.eegplot.set_time_lim(tmin, tmax, updateData=False)
         self.eegplot.plot()
         self.eegplot.draw()
-	"""
-    def specify_range_time(self, *args):
-        # mcc XXX: trying to be able to specify time as hour:min:sec
-        
-        response = get_num_range(as_times=True)
 
-        if response is None: return
-
-        eegstartdate = self.eegplot.eeg.get_date()
-        # now subtract the eegstartdate to get proper tmin/tmax values
-
-        print "EEGNavBar: specify_range_time: ACK subtracting " , str(response), "from " , eegstartdate
-        timedelta_start = datetime.timedelta(hours=(eegstartdate.time()).hour,
-                                             minutes=(eegstartdate.time()).minute, 
-                                             seconds=(eegstartdate.time()).second)
-        tmin, tmax = response
-
-        timedelta_tmin = datetime.timedelta(hours=response[0].hour, minutes=response[0].minute, seconds=response[0].second)
-        timedelta_tmax = datetime.timedelta(hours=response[1].hour, minutes=response[1].minute, seconds=response[1].second)
-
-        print "timedelta_start=", timedelta_start, "timedelta_tmin=", timedelta_tmin, "timedelta_tmax=", timedelta_tmax
-        
-        tmin, tmax = (timedelta_tmin - timedelta_start).seconds, (timedelta_tmax - timedelta_start).seconds
-
-        print "EEGNavBar: specify_range_time: tmin=", tmin, ", tmax=", tmax
-        
-        # figure out what times these times correspond to by getting eeg start time
-        
-        self.eegplot.set_time_lim(tmin, tmax, updateData=True)
-        self.eegplot.plot() #redraw the traces -eli
-        self.eegplot.draw()
-	"""
     def save_figure(self, button):
                 
         def print_ok(button):
@@ -395,382 +364,7 @@ class EEGNavBar(gtk.Toolbar, Observer):
         self.eegplot.plot() #redraw the traces -eli
         self.eegplot.draw()
         return False
-"""
-class AnnotationManager:
-    #""
-    CLASS: AnnotationManager
-    
-    The highlight is the currently created rectangle that has not yet been
-    annotated.  
 
-    The selected rectangle is a rect that has been annotated and
-    selected (not the same as highlighted!)
-    
-    #""
-    def __init__(self, eegplot):
-        self.eegplot = eegplot
-        self.axes = self.eegplot.axes
-        self.canvas = self.axes.figure.canvas
-
-        self.ann = self.eegplot.eeg.get_ann()
-
-        # Create list of eois.  Add eois from ann.
-        eoiAll = self.eegplot.get_eeg().get_amp().to_eoi()
-        eoiAll.set_description('All')
-        self.eois = {'All' : eoiAll}
-        self.eois.update(self.ann.eois)
-
-        rectprops = dict(facecolor='#bbbbff',
-                         alpha=0.5)
-        self.selector = SpanSelector(self.axes, self.onselect,'horizontal',
-                                               minspan=0.01, 
-                                               useblit=True,
-                                               rectprops=rectprops)
-
-        self._highlight = None
-        self.resize = False
-        self.background = None
-
-        def dlgAnnotate_ok_callback(params) :
-            self.dlgAnnotate.hide_widget()
-
-            # Add annotation to data structure
-            key = '%1.1f' % params['startTime'], '%1.1f' % params['endTime'], params['created']
-            params = self.dlgAnnotate.get_params()
-
-            # Set defaults / keep some old values
-            now = datetime.datetime.now() #fixed datetime syntax
-            if self.selectedkey is not None: # selected
-                params['created'] = self.ann[key]['created']
-                params['edited'] = now.ctime()
-                params['visible'] = self.ann[key]['visible']
-                params['rects'] = self.ann[key]['rects']
-            else : # create new
-                params['edited'] = params['created']
-                params['visible'] = 1
-                params['rects'] = None
-
-            # If shrink has changed, remove the rect(s);
-            # they will be recreated in update_annotations().
-            if (self.selectedkey is not None
-                and (self.ann[key]['shrink'] <> params['shrink']
-                     or self.dlgAnnotate.changed)) :
-                for rect in self.ann[key]['rects'] :
-                    self.eegplot.axes.patches.remove(rect)
-                params['rects'] = None
-
-            self.ann[key] = params
-
-            # Add new eoi, if any.
-            if not self.eois.get(params['eoi'].get_description()) :
-                self.add_eoi(params['eoi'])
-
-            # Write ann file.
-            self.ann.save_data()
-
-            # Create new annotation box.
-            self.update_annotations()
-
-            # Update ann browser info
-            self.dlgAnnBrowser.update_ann_info(key)
-
-            # Turn off highlight box.
-            self.remove_highlight()
-
-            return
-
-        def dlgAnnBrowser_ok_callback(*args) :
-            self.dlgAnnBrowser.hide_widget()
-            
-        self.selectedkey = None
-        self.dlgAnnotate = Dialog_Annotate(eegplot, self, ok_callback=dlgAnnotate_ok_callback)
-        self.dlgAnnBrowser = Dialog_AnnBrowser(eegplot, self, dlgAnnBrowser_ok_callback)
-
-        # Update Annotations menuitems sensitivity.
-        menuItemAnnBrowser = Shared.widgets.get_widget('menuItemAnnBrowser')
-        menuItemAnnBrowser.set_sensitive(1)
-        menuItemAnnCreateEdit = Shared.widgets.get_widget('menuItemAnnCreateEdit')
-        menuItemAnnCreateEdit.set_sensitive(1)
-        menuItemAnnHorizCursor = Shared.widgets.get_widget('menuItemAnnHorizCursor')
-        menuItemAnnHorizCursor.set_sensitive(1)
-        menuItemAnnVertCursor = Shared.widgets.get_widget('menuItemAnnVertCursor')
-        menuItemAnnVertCursor.set_sensitive(1)
-
-    def onselect(self, xmin, xmax):
-        if self._highlight is not None:
-            self.remove_highlight()
-        self._highlight = xmin, xmax, self._new_rect(xmin, xmax, 0, 1,
-                                                     facecolor='#bbbbff',
-                                                     edgecolor='k',
-                                                     linewidth=2,
-                                                     alpha=0.5,
-                                                     zorder=3
-                                                     )
-
-        # Update Annotations menuitems sensitivity
-        label = 'Create New'
-        menuItemAnnCreateEdit = Shared.widgets.get_widget('menuItemAnnCreateEdit')
-        menuItemAnnCreateEdit.get_children()[0].set_text(label)
-        menuItemAnnDelete = Shared.widgets.get_widget('menuItemAnnDelete')
-        menuItemAnnDelete.set_sensitive(0)
-        self.canvas.draw()
-
-    def _new_rect(self, xmin, xmax, ymin, ymax, **props):
-        trans = blended_transform_factory( self.axes.transData,
-                                        self.axes.transAxes   ) #xy_sep_transform deprecated
-
-	rect = Rectangle(xy=(xmin, ymin), width=xmax-xmin, height=ymax-ymin,
-                         transform=trans, **props)
-        self.axes.add_patch(rect)
-        return rect
-
-    def remove_rects(self) :
-        for key, info in self.ann.items() :
-            if info.get('rects') :
-                del info['rects']
-
-    def over_annotation(self, x, y):
-        #""
-        If you are over an annotation, return it's key
-
-        If you are over multiple annotations, return the one who's
-        center is closest to point
-
-        If not over annotation, return None
-        #""
-        ret = []
-        for key, info in self.ann.items() :
-           for rect in info['rects'] :
-               if rect.get_window_extent().contains(x, y) :
-                   #bounds = rect.get_window_extent().get_bounds()
-                   ax1 = rect.get_axes()
-		   bounds = ax1.dataLim.bounds # is this what i want?? -eli         
-		   middle = .5 * (2 * bounds[0] + bounds[2])
-                   d = abs(x - middle)
-                   ret.append((d, key))
-        ret.sort()
-        if not len(ret) : return None
-
-        return ret[0][1]  
-
-    def over_edge(self, x, y) :
-        #""
-        If you are over an annotation edge, return its key.
-        x,y are figure coordinates (i.e., event.x, event.y)
-        #""
-        key, side = None, None
-        t, yt = self.axes.transData.inverted().transform((x, y)) #replaced inverse_xy_tup with inverted().transform()
-        for key, info in self.ann.items() :
-            s = info['startTime']
-            e = info['endTime']
-            if t >= s - .05 and t <= s + .05 :
-                side = 0
-                break
-            elif t >= e - .05 and t <= e + .05 :
-                side = 1
-                break
-        else :
-            key = None
-
-        if key is not None :
-            for rect in info['rects'] : #get_bounds() is deprecated, use properties intervalx and intervaly -eli
-                #l, b, w, h = rect.get_window_extent().get_bounds()
-		ax1 = rect.get_axes()
-		l, b, w, h = ax1.dataLim.bounds # is this what i want?? -eli         
-		print l, b, w, h
-		r = l + w
-                t = b + h
-                if y <= t and y >= b :
-                    break
-            else :
-                key, side = None, None
-
-        return key, side
-
-    def is_over_highlight(self, t) :
-        xmin, xmax = self.highlight_span()
-        return t >= xmin and t <= xmax
-
-    def remove_highlight(self):
-        if self._highlight is not None:
-            xmin, xmax, rect = self._highlight
-            self.axes.patches.remove(rect)
-        self._highlight = None
-        self.canvas.draw()
-
-        # Update Annotations menuitems sensitivity
-        label = 'Create New'
-        menuItemAnnCreateEdit = Shared.widgets.get_widget('menuItemAnnCreateEdit')
-        menuItemAnnCreateEdit.get_children()[0].set_text(label)
-        menuItemAnnDelete = Shared.widgets.get_widget('menuItemAnnDelete')
-        menuItemAnnDelete.set_sensitive(0)
-
-    def get_highlight(self):
-        #""
-
-        return (xmin, xmax, Rectangle instance) if a rect is highlighted
-        Otherwise return None
-        #""
-        return self._highlight 
-
-    def highlight_span(self):
-        'return the min/max of current highlight or raise if not highlight'
-        if self._highlight is None: return None, None
-        xmin, xmax, rect = self._highlight
-        return xmin, xmax
-
-    def remove_selected(self):
-        #""
-        remove the selected annotation from the ann data struct and
-        the plot stff and redraw
-        #""
-
-        thisann = self.eegplot.annman.ann.pop(self.selectedkey) #trying to make this work with python's list.pop()
-        if thisann is None:
-            return
-
-        for rect in thisann['rects'] :
-            self.eegplot.axes.patches.remove(rect)
-        self.selectedkey = None
-        self.eegplot.draw()
-
-        # Update Annotations menuitems sensitivity
-
-        label = 'Create New'
-        menuItemAnnCreateEdit = Shared.widgets.get_widget('menuItemAnnCreateEdit')
-        menuItemAnnCreateEdit.get_children()[0].set_text(label)
-        menuItemAnnDelete = Shared.widgets.get_widget('menuItemAnnDelete')
-        menuItemAnnDelete.set_sensitive(0)
-
-    def set_selected(self, newkey=None) :
-        'selected is a start, end key; make that annotation the selected one'
-        if newkey == self.selectedkey: return
-            
-        menuItemAnnCreateEdit = Shared.widgets.get_widget('menuItemAnnCreateEdit')
-        menuItemAnnDelete = Shared.widgets.get_widget('menuItemAnnDelete')
-
-        if self.selectedkey is not None:
-            # unselect the old one if there is one
-            rects = self.ann[self.selectedkey].get('rects')
-            if rects is not None :
-
-                for rect in rects :
-                    rect.set_edgecolor('k')
-                    rect.set_linewidth(1)            
-
-        if newkey is None:
-            # Update Annotations menuitems sensitivity
-            menuItemAnnDelete.set_sensitive(0)
-        else :
-            # now set the props of the new one
-            rects = self.ann[newkey]['rects']
-            for rect in rects :
-                rect.set_edgecolor('r')
-                rect.set_linewidth(3)
-            self.canvas.draw()
-
-            # Update Annotations menuitems sensitivity
-            menuItemAnnCreateEdit.get_children()[0].set_text('Edit Selected')
-            menuItemAnnDelete.set_sensitive(1)
-
-        self.selectedkey = newkey
-
-    def start_resize(self, side) :
-        self.resize = True
-        self.resize_side = side
-        self.background = self.eegplot.canvas.copy_from_bbox(self.eegplot.axes.bbox)
-
-    def end_resize(self) :
-        self.resize = False
-        self.background = None
-        self.eegplot.draw()
-        
-    def resize_selected(self, s, e) :
-        rects = self.ann[self.selectedkey]['rects']
-        for rect in rects :
-            rect.set_x(s)
-            rect.set_width(e - s)
-
-        # Update key if it changed.
-        newkey = '%1.1f' % s, '%1.1f' % e
-        if newkey <> self.selectedkey :
-            self.ann[newkey] = self.ann[self.selectedkey]
-            self.ann[newkey]['startTime'] = s
-            self.ann[newkey]['endTime'] = e
-            del self.ann[self.selectedkey]
-
-            self.selectedkey = newkey
-
-        self.eegplot.canvas.restore_region(self.background)
-        for rect in rects :
-            self.eegplot.axes.draw_artist(rect)
-        self.eegplot.canvas.blit(self.eegplot.axes.bbox)
-
-    def update_annotations(self) :
-        #""
-        Create new annotation rectangles on file load or navigation
-        #""
-        tmin, tmax = self.eegplot.get_time_lim()
-
-        keys = self.ann.keys()
-        keys.sort()
-        for key in keys :
-            # Remove rects that are not visible.
-            if not self.ann[key].get('visible') :
-                rects = self.ann[key].get('rects')
-                if rects is not None :
-                    for rect in rects :
-                        self.eegplot.axes.patches.remove(rect)
-                    del self.ann[key]['rects']
-                    if self.selectedkey == key :
-                        self.set_selected()
-                continue
-
-            # Start or end of annotation box is in view
-            s = self.ann[key]['startTime']
-            e = self.ann[key]['endTime']
-            if not ( (s > tmin and s < tmax) or
-                     (e > tmin and e < tmax) ) : continue
-
-            # Draw/Update annotation box.
-            rects = self.ann[key].get('rects')
-            if rects is None:
-                rects = []
-                if self.ann[key]['shrink'] :
-                    channel_numd = self.eegplot.get_eeg().get_amp().get_electrode_to_indices_dict()
-                    eoiActive = self.eegplot.get_eoi()
-                    group = []
-                    for i, trode in enumerate(eoiActive) :
-                        if trode in self.ann[key]['eoi'] :
-                            group.append(i)
-                        else :          
-                            if len(group) :
-                                ymin = self.eegplot.offsets[group[-1]]
-                                ymax = self.eegplot.offsets[group[0]]
-                                rect = self._new_rect(s, e, ymin, ymax, zorder=3)
-                                rects.append(rect)
-                                group = []
-                    if len(group) :
-                        ymin = self.eegplot.offsets[group[-1]]
-                        ymax = self.eegplot.offsets[group[0]]
-                        rect = self._new_rect(s, e, ymin, ymax, zorder=3)
-                        rects.append(rect)
-
-                else :
-                    rect = self._new_rect(s, e, 0, 1, zorder=3)
-                    rects = [rect]
-                self.ann[key]['rects'] = rects
-
-            # Set some rect properties.
-            for rect in self.ann[key]['rects'] :
-                rect.set_facecolor(self.ann[key]['color'])
-                rect.set_alpha(self.ann[key]['alpha'])
-
-        self.eegplot.draw()
-
-    def add_eoi(self, eoi) :
-        self.eois[eoi.description] = eoi
-"""
 class EEGPlot(Observer):
     """
     CLASS: EEGPlot
@@ -1588,27 +1182,6 @@ class MainWindow(PrefixWrapper):
         fsize = self.fig.get_size_inches()
         self.fsize = copy.deepcopy(fsize)
 	
-        """
-        # Init Annotations menu sensitivity.
-        menuItemAnnBrowser = Shared.widgets.get_widget('menuItemAnnBrowser')
-        menuItemAnnBrowser.set_sensitive(0)
-        menuItemAnnCreateEdit = Shared.widgets.get_widget('menuItemAnnCreateEdit')
-        menuItemAnnCreateEdit.set_sensitive(0)
-        menuItemAnnDelete = Shared.widgets.get_widget('menuItemAnnDelete')
-        menuItemAnnDelete.set_sensitive(0)
-        menuItemAnnHorizCursor = Shared.widgets.get_widget('menuItemAnnHorizCursor')
-        menuItemAnnHorizCursor.set_sensitive(0)
-        if eegviewrc.horizcursor == 'True' :
-            menuItemAnnHorizCursor.set_active(1)
-        else :
-            menuItemAnnHorizCursor.set_active(0)
-        menuItemAnnVertCursor = Shared.widgets.get_widget('menuItemAnnVertCursor')
-        menuItemAnnVertCursor.set_sensitive(0)
-        if eegviewrc.vertcursor == 'True' :
-            menuItemAnnVertCursor.set_active(1)
-        else :
-            menuItemAnnVertCursor.set_active(0)
-        """
         self.canvas.mpl_connect('motion_notify_event', self.motion_notify_event)
         self.canvas.mpl_connect('button_press_event', self.button_press_event)
         self.canvas.mpl_connect('button_release_event', self.button_release_event)
@@ -1735,19 +1308,6 @@ class MainWindow(PrefixWrapper):
         menuItemSep = gtk.MenuItem()
         contextMenu.append(menuItemSep)
         menuItemSep.show()
-        """
-        label = "Create New Annotation"
-        menuItemAnnCreateEdit = gtk.MenuItem(label)
-        menuItemAnnCreateEdit.connect("activate", self.on_menuItemAnnCreateEdit_activate)
-        menuItemAnnCreateEdit.show()
-        contextMenu.append(menuItemAnnCreateEdit)
-
-        label = "Delete Annotation"
-        menuItemAnnDelete = gtk.MenuItem(label)
-        menuItemAnnDelete.connect("activate", self.on_menuItemAnnDelete_activate)
-        menuItemAnnDelete.show()
-        contextMenu.append(menuItemAnnDelete)
-        """
         menuItemSep = gtk.MenuItem()
         contextMenu.append(menuItemSep)
         menuItemSep.show()
@@ -1899,80 +1459,6 @@ class MainWindow(PrefixWrapper):
                            ok_callback=ok_callback)
         dlgSave.get_widget().set_transient_for(self.widget)
         dlgSave.show_widget()
-    """
-    def on_menuItemAnnCreateEdit_activate(self, event) :
-        annman = self.eegplot.annman
-        
-        params = {}
-        if annman.selectedkey is not None:
-            params = annman.ann[annman.selectedkey]
-        else:
-            # Create new annotation
-            now = datetime.datetime.now() #datetime.now() was wrong, using datetime.datetime.now() -eli
-            hlight = annman.get_highlight()
-            if hlight is None :
-                params = dict(created=now.ctime())
-            else :
-                start, end = annman.highlight_span()
-                params = dict(startTime=start, endTime=end,
-                              created=now.ctime())
-
-        annman.dlgAnnotate.set_params(params)
-        # XXX doesn't update when i set the hscale value in the constructor...
-        # dlgAnnotate['hscaleAlpha'].set_value(.5)
-        annman.dlgAnnotate.get_widget().set_transient_for(self.widget)
-        annman.dlgAnnotate.show_widget()
-
-    def on_menuItemAnnDelete_activate(self, event) :
-        dlg = gtk.MessageDialog(type=gtk.MESSAGE_QUESTION,
-                                buttons=gtk.BUTTONS_YES_NO,
-                                message_format='Are you sure you wish to delete this annotation?')
-        dlg.set_title('Delete Annotation')
-        response = dlg.run()
-        dlg.destroy()
-
-        if response == gtk.RESPONSE_YES :
-            self.eegplot.annman.remove_selected()
-            self.eegplot.annman.ann.save_data()
-            self.eegplot.annman.dlgAnnBrowser.update_ann_info()
-
-    def on_menuItemAnnHorizCursor_activate(self, checkMenuItem) :
-        if checkMenuItem.get_active() :
-            self.eegplot.cursor.horizOn = True
-            eegviewrc.horizcursor = True
-        else :
-            self.eegplot.cursor.horizOn = False
-            eegviewrc.horizcursor = False
-
-        return False
-
-    def on_menuItemAnnVertCursor_activate(self, checkMenuItem) :
-        if checkMenuItem.get_active() :
-            self.eegplot.cursor.vertOn = True
-            eegviewrc.vertcursor = True
-        else :
-            self.eegplot.cursor.vertOn = False
-            eegviewrc.vertcursor = False
-
-        return False
-    """
-    #def on_buttonSaveExcursion_clicked(self, event):
-    #    self.eegplot.save_excursion()
-    #    return False
-    #
-    #def on_buttonRestoreExcursion_clicked(self, event):
-    #    self.eegplot.restore_excursion()
-    #    self.eegplot.draw()
-    #    return False
-    
-    #def on_buttonJumpToTime_clicked(self, event):
-    #    val = str2num_or_err(self['entryJumpToTime'].get_text(),
-    #                        parent=self.widget)
-    #
-    #    if val is None: return
-    #    self.eegplot.set_time_lim(val)
-    #    self.eegplot.draw()
-    #    return False
 
     def expose_event(self, widget, event):
         #now the traces resize themselves on window resize - hurrah! eli
@@ -2005,30 +1491,6 @@ class MainWindow(PrefixWrapper):
         if event.inaxes == self.axes:
             t, yt = event.xdata, event.ydata
             #t = float('%1.1f' % t)
-            """
-            annman = self.eegplot.annman
-
-            # Resize annotation.
-            if event.button == 1 :
-                if annman.resize :
-                    s = annman.ann[annman.selectedkey]['startTime']
-                    e = annman.ann[annman.selectedkey]['endTime']
-                    if annman.resize_side == 0 :
-                        s = t
-                    else :
-                        e = t
-                    if s < e :
-                        annman.resize_selected(s, e)
-                else :
-                    annman.set_selected()    
-            else :
-                # Change mouse cursor if over an annotation edge.
-                selected, side = annman.over_edge(event.x, event.y)
-                if selected is not None :
-                    self.widget.window.set_cursor(gdk.Cursor(gdk.SB_H_DOUBLE_ARROW))
-                else :
-                    self.widget.window.set_cursor(gdk.Cursor(gdk.LEFT_PTR))
-            """
             # Update status bar with time and electrode name and number
             trode = self.eegplot.get_channel_at_point(event.x, event.y, False)
             if trode is not None:
@@ -2087,25 +1549,10 @@ class MainWindow(PrefixWrapper):
         if event.button == 1 or event.button == 3 :
             if event.inaxes == self.axes:
                 t, yt = event.xdata, event.ydata
-                """
-                if not annman.is_over_highlight(t) :
-                    key = annman.over_annotation(event.x, event.y)
-                    annman.remove_highlight()
-                    annman.set_selected(key)
-                    annman.dlgAnnBrowser.update_ann_info(key)
-                """
         if event.button==1:
             if event.inaxes == self.axes:
                 self.eegplot.cursor.visible = False
                 t, yt = event.xdata, event.ydata
-                """
-                # Start resize if edge of an annotation clicked.
-                selected, side = annman.over_edge(event.x, event.y)
-                if selected is not None :
-                    annman.set_selected(selected)
-                    annman.start_resize(side)
-                    annman.selector.visible = False
-                """
                 # Select an electrode if not locked.
                 if not self.eegplot.lock_trode :                        
                     trode = self.eegplot.get_channel_at_point(event.x, event.y)
@@ -2117,45 +1564,13 @@ class MainWindow(PrefixWrapper):
             # right click brings up the context menu
             if event.inaxes == self.axes:
                 menu = self.eoiMenu
-                # Update popup menu items
-                #highsens =  annman.get_highlight() is not None
-                #selsens = self.eegplot.annman.selectedkey is not None
-                #if highsens: label = 'Create New Annotation'
-                #else: label = 'Edit Selected Annotation'
-
-                #menuItems = menu.get_children()
-                #print "menuItems = " , menuItems
-                #menuItemAnnCreateEdit = menuItems[-2]
-                #print "menuItemAnnCreateEdit = " , menuItemAnnCreateEdit
-                #menuItemAnnCreateEdit.get_children()[0].set_text(label)
-                #menuItemAnnDelete = menuItems[-1]
-                #menuItemAnnDelete.set_sensitive(selsens)
-
             elif event.inaxes == self.axesSpec:
                 menu = self.specMenu
-            """
-            # Update popup menu items
-            highsens =  annman.get_highlight() is not None
-            selsens = self.eegplot.annman.selectedkey is not None
-            if highsens or not selsens : label = 'Create New Annotation'
-            else: label = 'Edit Selected Annotation'
-
-            menu.popup(None, None, None, 0, 0)
-	        """
         return False
 
     def button_release_event(self, event):
         try: self.eegplot
         except AttributeError: return False
-        """
-        annman = self.eegplot.annman
-
-        # Write ann file
-        if annman.resize :
-            annman.ann.save_data()
-            annman.selector.visible = True
-            annman.end_resize()
-        """
         self.eegplot.cursor.visible = True
         self.buttonDown = None
 
@@ -2204,8 +1619,6 @@ class MainWindow(PrefixWrapper):
     def on_menuFileQuit_activate(self, event):
         update_rc_and_die()
 
-    #def on_menuFileNew_activate(self, event):
-    #    not_implemented(self.widget)
 
     def get_eeg_params(self, fullpath):
         def callback(pars): pass
@@ -2234,14 +1647,6 @@ class MainWindow(PrefixWrapper):
         return False
 
     def on_menuFileOpen_activate(self, event):
-        #dlg = gtk.FileSelection('Select EEG param file')
-        #dlg.set_transient_for(self.widget)
-        #dlg.set_filename(fmanager.get_lastdir() + os.sep)
-
-        #dlg.cancel_button.connect("clicked", lambda w: dlg.destroy())
-        #dlg.show()
-
-        #response = dlg.run()
 
         def ok_callback(dlg):
             fname = dlg.get_filename()
@@ -2422,15 +1827,6 @@ class MainWindow(PrefixWrapper):
             w.writeframes(struct.pack('%dh' % len(shrt_array), *shrt_array))
             w.close()
             
-    """    
-    def on_menuItemAnnBrowser_activate(self, event) :
-        try : self.eegplot
-        except : pass
-        else :
-            self.eegplot.annman.dlgAnnBrowser.show()
-
-        return False
-    """
     def on_menuHelpAbout_activate(self, event):
         not_implemented(self.widget)
 
