@@ -52,7 +52,7 @@ def detrend_none(x):
     return x
 
 
-def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=2, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none):
+def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
     oldNFFT = NFFT
     NFFT = newLength
     numRows, numCols = X.shape
@@ -111,6 +111,7 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=2, progr
     count = 0
     normArr = np.zeros(len(ij))
     N = len(ij)
+    typedict = ['params_ftest', 'ssr_chi2test']
     for i,j in ij:
         count += 1
         if count%10==0:
@@ -118,12 +119,13 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=2, progr
         
         d = np.vstack((Pxx[i],Pxx[j])).T
         res = gtest.grangercausalitytests(d,maxlag,verbose=False)
-        normArr[count-1] = res[maxlag][0]['lrtest'][0]
-        print "RESIS: ", res
-        Cxy[i,j] = res[maxlag][0]['lrtest'][0]
-        #print "FIRSTRES!", Cxy[i,j]
-        Phase[i,j] = res[maxlag][0]['lrtest'][1]
+        print "looking at: ", res[maxlag][0]
+        normArr[count-1] = res[maxlag][0][typedict[gv1]][gv2]        
+        Cxy[i,j] = res[maxlag][0][typedict[gv1]][gv2]
+        print typedict[gv1],gv2
+        print "RESIS: ", Cxy[i,j]
 
+        Phase[i,j] = res[maxlag][0][typedict[gv1]][(not gv2)]
         
     CxyStd = np.std(normArr)
     print "standarddev", CxyStd

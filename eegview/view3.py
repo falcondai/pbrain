@@ -166,6 +166,11 @@ class View3(gtk.Window, Observer):
         self.NFFT = 512. #sweeplength
         self.newLength = 256. #windowlength
         self.offset = 0.
+	self.granger = False
+	self.maxlag = 3
+	self.gv1 = 0
+	self.gv2 = 0
+	
         
         seen = {}
         for key in self.eoi:
@@ -415,6 +420,9 @@ class View3(gtk.Window, Observer):
             
         self.buttonRange = gtk.CheckButton()
         self.buttonRange.set_active(False)
+
+        self.buttonGranger = gtk.CheckButton()
+        self.buttonGranger.set_active(False)
         
         #self.buttonRange.set_mode(True)
         self.buttonPxx = gtk.CheckButton()
@@ -442,8 +450,8 @@ class View3(gtk.Window, Observer):
             self.buttonRange.connect('toggled',self.rangeButton_toggled)
             dlg2 = gtk.Dialog("Coherence Calculation Parameters")
             dlg2.connect("destroy", dlg2.destroy)
-            dlg2.set_size_request(380,400)
-            table2 = gtk.Table(3,6)
+            dlg2.set_size_request(450,550)
+            table2 = gtk.Table(3,9)
             table2.show()
             table2.set_row_spacings(4)
             table2.set_col_spacings(4)
@@ -457,7 +465,13 @@ class View3(gtk.Window, Observer):
             lcoh.show()
             loff = gtk.Label("Offset in ms:")
             loff.show()
-            lhelp = gtk.Label("Note: coherence is indexed by sweep length into datarange. if coh window size < sweep length, some data will be skipped over. set datarange manually for individual runs of trial, or choose all data for all trial runs.") 
+	    lgranger = gtk.Label("true = granger, false = coh")
+	    lgranger.show()
+	    lmaxlag = gtk.Label("maxlag for granger:")
+	    lmaxlag.show()
+	    lgv = gtk.Label("type and version for granger")
+	    lgv.show()
+            lhelp = gtk.Label("Note: coherence is indexed by sweep length into datarange. if coh window size < sweep length, some data will be skipped over. set datarange manually for individual runs of trial, or choose all data for all trial runs. FOR GRANGER: params - first value 0-1, second 0-1 - first chooses: ['params_ftest' or 'ssr_chi2test'], second chooses teststatistic or pvalue. Note that pvalue is in phase or vice versa.") 
             lhelp.set_line_wrap(True)
             lhelp.show()
             esweep = gtk.Entry()
@@ -475,8 +489,25 @@ class View3(gtk.Window, Observer):
             eoff.set_text("%d" % ((self.offset/eegfreq)*1000))
             eoff.connect('changed', self.numbify)
             eoff.show()
+	    emaxlag = gtk.Entry()
+	    emaxlag.set_width_chars(1)
+            emaxlag.set_text(str(self.maxlag))
+            emaxlag.connect('changed', self.numbify)
+            emaxlag.show()
+	    egv1 = gtk.Entry()
+	    egv1.set_width_chars(1)
+            egv1.set_text(str(self.gv1))
+            egv1.connect('changed', self.numbify)
+            egv1.show()
+	    egv2 = gtk.Entry()
+	    egv2.set_width_chars(1)
+            egv2.set_text(str(self.gv2))
+            egv2.connect('changed', self.numbify)
+            egv2.show()
+	    
             self.buttonRange.show()
             self.buttonPxx.show()
+	    self.buttonGranger.show()
             self.ltimerange.show()
             self.etimemin.set_width_chars(3)
             self.etimemax.set_width_chars(3)
@@ -498,9 +529,16 @@ class View3(gtk.Window, Observer):
             table2.attach(lsweep,0,1,3,4)
             table2.attach(lcoh,0,1,4,5)
             table2.attach(loff,0,1,5,6)
-            table2.attach(esweep,1,2,3,4)
+	    table2.attach(lgranger,0,1,6,7)
+            table2.attach(lmaxlag,0,1,7,8)
+	    table2.attach(lgv,0,1,8,9)
+	    table2.attach(esweep,1,2,3,4)
             table2.attach(ecoh,1,2,4,5)
             table2.attach(eoff,1,2,5,6)
+	    table2.attach(self.buttonGranger,1,2,6,7)
+	    table2.attach(emaxlag,1,2,7,8)
+	    table2.attach(egv1,1,2,8,9)
+	    table2.attach(egv2,2,3,8,9)
 
             dlg2.vbox.pack_start(table2, True, True)
             dlg2.vbox.pack_start(lhelp, True, False)
@@ -512,11 +550,18 @@ class View3(gtk.Window, Observer):
             dlg2.show()
             while 1:
                 response2 = dlg2.run()
-
+		
                 if response2==gtk.RESPONSE_OK:
                     self.NFFT = ms2points(int(esweep.get_text()),eegfreq)
                     self.offset = ms2points(int(eoff.get_text()),eegfreq)
                     self.newLength = ms2points(int(ecoh.get_text()),eegfreq)
+		    self.maxlag = int(emaxlag.get_text())
+		    self.gv1 = int(egv1.get_text())
+		    self.gv2 = int(egv2.get_text()) 
+		    if self.buttonGranger.get_active():
+			self.granger = True
+		    else:
+			self.granger = False
                     if self.buttonRange.get_active():
                         range_toggled()
                     else:
@@ -542,11 +587,6 @@ class View3(gtk.Window, Observer):
         self.add_toolbutton1(toolbar1, gtk.STOCK_SAVE_AS, 'Save screenshot', 'Private', self.save_image)
         self.add_toolbutton1(toolbar1, gtk.STOCK_JUMP_TO, 'Autopage/Movie', 'Private', self.auto_play)
 
-        
-        
-
-
-        
 
         
         return toolbar1
@@ -1545,7 +1585,9 @@ class View3(gtk.Window, Observer):
             
     #COMPUTE COHERENCE: CALLED BY RECIEVE: SET_TIME_LIM
     #args are min and max time
-    def compute_coherence(self, setTime=None, granger=False, *args):
+    def compute_coherence(self, setTime=None, *args):
+	granger = self.granger    
+	maxlag = self.maxlag
         #code for view3 progressbar on the right
         if sys.platform == 'darwin':
             def progress_callback(frac,  msg):
@@ -1574,7 +1616,7 @@ class View3(gtk.Window, Observer):
                 self.pxxResults = pxxRes
                 return
 
-	granger = True
+	
         
         eeg = self.eegplot.get_eeg()
         #dt is not used right now. le sigh.
@@ -1609,7 +1651,10 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=True,
-		granger_on = granger
+		granger_on = granger,
+		maxlag = maxlag,
+		gv1 = self.gv1,
+		gv2 = self.gv2
             )
             pxxBand = power_bands(Pxx, freqs, bands)
             self.pxxResults = pxxBand
@@ -1627,7 +1672,10 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=False,
-		granger_on = granger
+		granger_on = granger,
+		maxlag = maxlag,
+		gv1 = self.gv1,
+		gv2 = self.gv2
             )
             self.pxxResults = None
         
