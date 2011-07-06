@@ -2,6 +2,7 @@ import numpy as np
 import scikits.statsmodels.tsa.stattools as gtest
 import math
 import matplotlib.cbook as cbook
+import signal_gen
 
 
 def window_hanning(x):
@@ -42,6 +43,14 @@ def start_test(maxlag, col1,col2, start, stop):
     
     d = np.vstack((Xnew,Ynew)).T
     res = gtest.grangercausalitytests(d, maxlag, verbose=False)
+    return res
+
+def start_test_signal_gen(lag,SNR, K1,K2,col1,col2):
+    data = signal_gen.signal_gen(SNR, K1,K2)
+    Xnew = data[col1]
+    Ynew = data[col2]
+    d = np.vstack((Xnew,Ynew)).T
+    res = gtest.grangercausalitytests(d, lag, verbose=True)
     return res
 
 def donothing_callback(*args):
@@ -120,17 +129,22 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
         d = np.vstack((Pxx[i],Pxx[j])).T
         res = gtest.grangercausalitytests(d,maxlag,verbose=False)
         print "looking at: ", res[maxlag][0]
-        normArr[count-1] = res[maxlag][0][typedict[gv1]][gv2]        
-        Cxy[i,j] = res[maxlag][0][typedict[gv1]][gv2]
+        normArr[count-1] = res[maxlag][0][typedict[gv1]][gv2]
+        # this gets the p value
+        Cxy[i,j] = res[maxlag][0][typedict[gv1]][not gv2]
+        Cxy[i,j] = 1 - Cxy[i,j]
+        if Cxy[i,j] == 1:
+            Cxy[i,j] = 0
+    
         print typedict[gv1],gv2
         print "RESIS: ", Cxy[i,j]
 
-        Phase[i,j] = res[maxlag][0][typedict[gv1]][(not gv2)]
+        Phase[i,j] = res[maxlag][0][typedict[gv1]][(gv2)]
         
-    CxyStd = np.std(normArr)
-    print "standarddev", CxyStd
-    for i,j in ij:
-        Cxy[i,j] = Cxy[i,j]/CxyStd
+    #CxyStd = np.std(normArr)
+    #print "standarddev", CxyStd
+    #for i,j in ij:
+    #    Cxy[i,j] = Cxy[i,j]/CxyStd
 
     print "NFFT, NUMFREQS: ", NFFT, numFreqs
     freqs = Fs/NFFT*np.arange(numFreqs)
