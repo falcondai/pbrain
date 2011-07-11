@@ -62,6 +62,7 @@ def detrend_none(x):
 
 
 def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
+    threshold = .05/(len(ij)*2)
     oldNFFT = NFFT
     NFFT = newLength
     numRows, numCols = X.shape
@@ -118,8 +119,9 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
     Cxy = {}
     Phase = {}
     count = 0
-    normArr = np.zeros(len(ij))
+
     N = len(ij)
+
     typedict = ['params_ftest', 'ssr_chi2test']
     for i,j in ij:
         count += 1
@@ -127,25 +129,30 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
             progressCallback(count/N, 'Computing coherences')
         
         d = np.vstack((Pxx[i],Pxx[j])).T
+        drev = np.vstack((Pxx[j],Pxx[i])).T
         res = gtest.grangercausalitytests(d,maxlag,verbose=False)
+        resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
         print "looking at: ", res[maxlag][0]
-        normArr[count-1] = res[maxlag][0][typedict[gv1]][gv2]
+
         # this gets the p value
-        Cxy[i,j] = res[maxlag][0][typedict[gv1]][not gv2]
-        Cxy[i,j] = 1 - Cxy[i,j]
-        if Cxy[i,j] == 1:
+        result = res[maxlag][0][typedict[gv1]][not gv2]
+        rev_result = resrev[maxlag][0][typedict[gv1]][not gv2]
+        if result <= threshold and rev_result > threshold:
+            Cxy[i,j] = 1 - (result/threshold)
+            Phase[i,j] = 1
+        elif result > threshold and rev_result <= threshold:
+            Cxy[i,j] = 1 - (rev_result/threshold)    
+            Phase[i,j] = -1
+        else:
             Cxy[i,j] = 0
+            Phase[i,j] = 0
+
     
-        print typedict[gv1],gv2
-        print "RESIS: ", Cxy[i,j]
+        # print typedict[gv1],gv2
+        print "RESIS: ", Cxy[i,j], "RESULT ", result, "REVRESULT ", rev_result
 
-        Phase[i,j] = res[maxlag][0][typedict[gv1]][(gv2)]
         
-    #CxyStd = np.std(normArr)
-    #print "standarddev", CxyStd
-    #for i,j in ij:
-    #    Cxy[i,j] = Cxy[i,j]/CxyStd
-
+        
     print "NFFT, NUMFREQS: ", NFFT, numFreqs
     freqs = Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs

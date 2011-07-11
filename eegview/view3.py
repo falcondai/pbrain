@@ -132,7 +132,7 @@ class View3(gtk.Window, Observer):
         print "View3.__init__()"
         gtk.Window.__init__(self)
 
-	matplotlib.rcParams['figure.facecolor'] = 'black'
+	# matplotlib.rcParams['figure.facecolor'] = 'black'
 
         self.ok = False  # do not show if false
         

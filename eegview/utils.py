@@ -377,8 +377,12 @@ def cohere_bands(cxy, phase, freqs, keys,
             progressCallback(count/Nkeys,  'Averaging over bands')
         thisCxy = cxy[key]
         thisPhase = phase[key]
-        ac = zeros( (Nbands,), thisCxy.dtype)
-        ap = zeros( (Nbands,), thisPhase.dtype)
+        if not granger:
+            ac = zeros( (Nbands,), thisCxy.dtype)
+            ap = zeros( (Nbands,), thisPhase.dtype)
+        else:
+            ac = zeros( (Nbands,), float)
+            ap = zeros( (Nbands,), float)
         count = 0
         for inds, inde in ind:
             if inds==inde:
