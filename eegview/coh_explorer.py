@@ -439,6 +439,8 @@ class CohExplorer(gtk.Window, Observer):
             
 
             def do_granger(trode):
+                if line[cstart] == 0:
+                    return
                 if (line[trode] in tr):
                     item = tr[line[trode]]
                     item[0] += 1 # note increased freq
