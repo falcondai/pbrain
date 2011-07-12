@@ -132,18 +132,25 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
         drev = np.vstack((Pxx[j],Pxx[i])).T
         res = gtest.grangercausalitytests(d,maxlag,verbose=False)
         resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
-        print "looking at: ", res[maxlag][0]
+        # print "looking at: ", res[maxlag][0]
 
         # this gets the p value
         result = res[maxlag][0][typedict[gv1]][not gv2]
         rev_result = resrev[maxlag][0][typedict[gv1]][not gv2]
         if result <= threshold and rev_result > threshold:
             Cxy[i,j] = 1 - (result/threshold)
-            Phase[i,j] = 1
+            Phase[i,j] = 90
         elif result > threshold and rev_result <= threshold:
             Cxy[i,j] = 1 - (rev_result/threshold)    
-            Phase[i,j] = -1
-        else:
+            Phase[i,j] = -90
+        elif result <= threshold and rev_result <= threshold:
+            Cxy[i,j] = min((result, rev_result))
+            direction = (result,rev_result).index(Cxy[i,j])
+            if direction == 0:
+                Phase[i,j] = 10
+            else:
+                Phase[i,j] = -10
+        else: 
             Cxy[i,j] = 0
             Phase[i,j] = 0
 

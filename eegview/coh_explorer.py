@@ -124,7 +124,7 @@ class CohExplorer(gtk.Window, Observer):
             self.opt = label
             
         bandMenu = make_option_menu(self.bandlist, func=set_active_band)
-        optMenu = make_option_menu(['coh', 'chanpairs', 'phase', 'cohphase'], func=set_opts)
+        optMenu = make_option_menu(['coh', 'chanpairs', 'phase', 'cohphase', 'granger'], func=set_opts)
         
         lEntry = gtk.Label()
         lEntry.set_text("ms")
@@ -395,6 +395,7 @@ class CohExplorer(gtk.Window, Observer):
                         #note: later I will make a new data format that assumes all params set initially, with no inner headers.
                 #print "current time is ", tcur
                 tr = copy.deepcopy(tr) #trodes is a dict from name of trode to tuple containing numsamples and sumsamples. copies are important.
+                # um, about the above line - huh?
                 tr = {} #get ready
                 trodelist.append(tr) #add  tr to the list of data
                 
@@ -427,12 +428,33 @@ class CohExplorer(gtk.Window, Observer):
                 cend = 14
             if (opt == 'cohphase'):
                 cstart = 2
-                cend = 14                
+                cend = 14 
             
             for col in arange(cstart,cend): #change nan to 0
                 if (math.isnan(float(line[col]))):
                     line[col] = 0 
-            if (self.opt != 'chanpairs'):
+            
+
+            def do_granger(trode):
+                if (line[trode] in tr):
+                    item = tr[line[trode]]
+                    item[0] += 1 # note increased freq
+                    item[1] += float(line[2]) # add the new value
+                else:
+                    tr[line[trode]] = [1,float(line[2])]
+
+            if (self.opt == 'granger' or self.opt == 'grangerboth'):
+                # check direction - positive phase means index 0 is progenitor
+                if line[9] > 0:
+                    do_granger(zstart)
+                elif line[9] < 0:
+                    do_granger(zend)
+                else:
+                    if self.opt == 'grangerboth':
+                        do_granger(zstart)
+                        do_granger(zend)
+
+            elif (self.opt != 'chanpairs'):
                 for z in (zstart,zend):
                     if opt == 'cohphase':
                         if (line[z] in tr):
@@ -495,7 +517,7 @@ class CohExplorer(gtk.Window, Observer):
                 isplit1 = isplit1[0],int(isplit1[1])
                 isplit2 = isplit2[0],int(isplit2[1])
                 isplit = (isplit1, isplit2)
-                print "i is: ", i
+                print "isplit is: ", isplit
             else:
                 isplit = i.split(" ")
                 isplit = isplit[0],int(isplit[1])
