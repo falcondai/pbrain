@@ -124,7 +124,7 @@ class CohExplorer(gtk.Window, Observer):
             self.opt = label
             
         bandMenu = make_option_menu(self.bandlist, func=set_active_band)
-        optMenu = make_option_menu(['coh', 'chanpairs', 'phase', 'cohphase', 'granger'], func=set_opts)
+        optMenu = make_option_menu(['coh', 'chanpairs', 'phase', 'cohphase', 'granger', 'grangerbidirect'], func=set_opts)
         
         lEntry = gtk.Label()
         lEntry.set_text("ms")
@@ -429,6 +429,9 @@ class CohExplorer(gtk.Window, Observer):
             if (opt == 'cohphase'):
                 cstart = 2
                 cend = 14 
+            if (opt == 'granger' or opt == 'grangerbidirect'):
+                cstart = 2
+                cend = 8
             
             for col in arange(cstart,cend): #change nan to 0
                 if (math.isnan(float(line[col]))):
@@ -439,22 +442,22 @@ class CohExplorer(gtk.Window, Observer):
                 if (line[trode] in tr):
                     item = tr[line[trode]]
                     item[0] += 1 # note increased freq
-                    item[1] += float(line[2]) # add the new value
+                    item[1] += [ab+ac for ab,ac in zip(item[1], map(float,line[cstart:cend]))] #add the new data, for all bands
                 else:
-                    tr[line[trode]] = [1,float(line[2])]
+                    tr[line[trode]] = map(float,line[cstart:cend])
 
-            if (self.opt == 'granger' or self.opt == 'grangerboth'):
+            if (opt == 'granger' or opt == 'grangerbidirect'):
                 # check direction - positive phase means index 0 is progenitor
-                if line[9] > 0:
+                if line[9] > 11:
                     do_granger(zstart)
-                elif line[9] < 0:
+                elif line[9] < -11:
                     do_granger(zend)
-                else:
-                    if self.opt == 'grangerboth':
+                elif line[0] != 0:
+                    if opt == 'grangerboth':
                         do_granger(zstart)
                         do_granger(zend)
 
-            elif (self.opt != 'chanpairs'):
+            elif (opt != 'chanpairs'):
                 for z in (zstart,zend):
                     if opt == 'cohphase':
                         if (line[z] in tr):
