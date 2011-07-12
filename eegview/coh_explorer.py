@@ -397,6 +397,7 @@ class CohExplorer(gtk.Window, Observer):
                 tr = copy.deepcopy(tr) #trodes is a dict from name of trode to tuple containing numsamples and sumsamples. copies are important.
                 # um, about the above line - huh?
                 tr = {} #get ready
+                print "tr is empty? ", tr
                 trodelist.append(tr) #add  tr to the list of data
                 
                 #print "appended new list at index ", i
@@ -439,22 +440,24 @@ class CohExplorer(gtk.Window, Observer):
             
 
             def do_granger(trode):
-                if float(line[cstart]) == 0:
-                    return
-                if (line[trode] in tr):
-                    item = tr[line[trode]]
-                    item[0] += 1 # note increased freq
-                    item[1] += [ab+ac for ab,ac in zip(item[1], map(float,line[cstart:cend]))] #add the new data, for all bands
-                else:
-                    tr[line[trode]] = [1, map(float,line[cstart:cend])]
+                
+                if float(line[cstart]) != 0:
+                    if (line[trode] in tr):
+                        item = tr[line[trode]]
+                        item[0] += 1 # note increased freq
+                        item[1] += [ab+ac for ab,ac in zip(item[1], map(float,line[cstart:cend]))] #add the new data, for all bands
+                    else:
+                        tr[line[trode]] = [1, map(float,line[cstart:cend])]
 
             if (opt == 'granger' or opt == 'grangerbidirect'):
                 # check direction - positive phase means index 0 is progenitor
-                if line[9] > 11:
+                direction = float(line[9])
+                print "direction: ", direction
+                if direction > 11:
                     do_granger(zstart)
-                elif line[9] < -11:
+                elif direction < -11:
                     do_granger(zend)
-                elif line[0] != 0:
+                elif direction != 0:
                     if opt == 'grangerbidirect':
                         do_granger(zstart)
                         do_granger(zend)
@@ -535,6 +538,8 @@ class CohExplorer(gtk.Window, Observer):
             oldX1 = 999
             for t in keys: #at each time point. we don't want to use more of t_data than is asked for. took out index: #[0:self.length]
                 if (self.opt != 'cohphase'):
+                    if i not in self.t_data[t]:
+                        self.t_data[t][i] = (1,[0,0,0,0,0])
                     (ns,ss) = self.t_data[t][i] #get the data out
                     ssband = ss[col] #choose the band
                     x1 = ssband/ns #find the average
