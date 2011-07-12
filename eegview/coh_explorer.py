@@ -444,7 +444,7 @@ class CohExplorer(gtk.Window, Observer):
                     item[0] += 1 # note increased freq
                     item[1] += [ab+ac for ab,ac in zip(item[1], map(float,line[cstart:cend]))] #add the new data, for all bands
                 else:
-                    tr[line[trode]] = map(float,line[cstart:cend])
+                    tr[line[trode]] = [1, map(float,line[cstart:cend])]
 
             if (opt == 'granger' or opt == 'grangerbidirect'):
                 # check direction - positive phase means index 0 is progenitor
