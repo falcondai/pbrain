@@ -439,7 +439,7 @@ class CohExplorer(gtk.Window, Observer):
             
 
             def do_granger(trode):
-                if line[cstart] == 0:
+                if float(line[cstart]) == 0:
                     return
                 if (line[trode] in tr):
                     item = tr[line[trode]]
