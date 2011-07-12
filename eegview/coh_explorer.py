@@ -453,7 +453,7 @@ class CohExplorer(gtk.Window, Observer):
                 elif line[9] < -11:
                     do_granger(zend)
                 elif line[0] != 0:
-                    if opt == 'grangerboth':
+                    if opt == 'grangerbidirect':
                         do_granger(zstart)
                         do_granger(zend)
 
