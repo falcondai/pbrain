@@ -116,6 +116,7 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
         print "shape of pxx one col: ", Pxx[iCol].shape
         # print Pxx[iCol]
     del Slices, ind, windowVals
+
     Cxy = {}
     Phase = {}
     count = 0
@@ -164,6 +165,115 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
     freqs = Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
     return Cxy, Phase, freqs
+
+
+
+
+def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
+
+    oldNFFT = NFFT
+    NFFT = newLength
+    numRows, numCols = X.shape
+
+    if numRows < NFFT:
+        tmp = X
+        X = np.zeros( (NFFT, numCols), X.dtype)
+        X[:numRows,:] = tmp
+        del tmp
+
+    numRows, numCols = X.shape
+    # get all the columns of X that we are interested in by checking
+    # the ij tuples
+    allColumns = set()
+    for i,j in ij:
+        allColumns.add(i); allColumns.add(j)
+    Ncols = len(allColumns)
+
+    # for real X, ignore the negative frequencies
+    if np.iscomplexobj(X): numFreqs = NFFT
+    else: numFreqs = NFFT//2+1
+
+    if cbook.iterable(window):
+        assert(len(window) == NFFT)
+        windowVals = window
+    else:
+        windowVals = window_hanning(np.ones(NFFT, X.dtype)) #I changed this from window to window_hanning. window was not doing anything!! -eli
+
+    ind = range(offset, int(numRows-newLength+1), int(oldNFFT-noverlap)) #coherence calcs on each sweep start at offset
+    numSlices = len(ind)
+    threshold = .05/(numSlices*2)
+    FFTSlices = {}
+    Pxx = {}
+    Cxy = {}
+    Phase = {}
+    
+    if newLength > oldNFFT: #make sure that the newlength is shorter than the segment (epoch) length (see below)
+        newLength = oldNFFT
+    slices = range(numSlices)
+    typedict = ['params_ftest', 'ssr_ftest']
+    
+    # normVal = np.linalg.norm(windowVals)**2
+    counter = 0
+    for i,j in ij: # FOR EACH ELECTRODE PAIR
+        progressCallback(counter/len(ij), 'Cacheing FFTs')
+        Slices = np.zeros((numSlices, 1))
+        RevSlices = np.zeros((numSlices, 1))
+        counter += 1
+        counter2 = 0
+        print i,j
+        for iSlice in slices: # FOR EACH TRIAL
+            thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, i] #this is the line that reads sections of epochs
+            thisSlice2 = X[ind[iSlice]:ind[iSlice]+newLength, j] 
+            #print "GRANGER TESTING: ", ind[iSlice], " to ", ind[iSlice] + newLength
+            #print "shape of all: ", Slices.shape
+            #print "shape of slice: ", thisSlice.shape
+            thisSlice = windowVals*detrend(thisSlice)
+            thisSlice2 = windowVals*detrend(thisSlice2)
+            d = np.vstack((thisSlice,thisSlice2)).T
+            drev = np.vstack((thisSlice2,thisSlice)).T
+            res = gtest.grangercausalitytests(d,maxlag,verbose=False)
+            resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
+            print "RES: ", res 
+            presult = res[maxlag][0][typedict[gv1]][not gv2]
+            prev_result = resrev[maxlag][0][typedict[gv1]][not gv2]
+            fresult = np.log(res[maxlag][0][typedict[gv1]][gv2])
+            frev_result = np.log(resrev[maxlag][0][typedict[gv1]][gv2])
+            print "RESULTS: ", fresult, frev_result
+            if presult <= threshold and prev_result > threshold:
+                Slices[counter2] = fresult
+                RevSlices[counter2] = 0.
+            elif presult > threshold and prev_result <= threshold:
+                RevSlices[counter2] = frev_result
+                Slices[counter2] = 0.
+            elif presult <= threshold and prev_result <= threshold:
+                Slices[counter2] = fresult
+                RevSlices[counter2] = frev_result
+            else: 
+                Slices[counter2] = 0.
+                RevSlices[counter2] = 0.
+            
+            counter2 += 1
+            
+        avg_forward = np.mean(Slices)
+        avg_backwards = np.mean(RevSlices)
+        Cxy[i,j] = max((avg_forward, avg_backwards))
+        
+        direction = (avg_forward,avg_backwards).index(Cxy[i,j])
+        if direction == 0:
+            Phase[i,j] = 90
+        else:
+            Phase[i,j] = -90
+        print "TRODE RESULTS: ", Cxy[i,j], Phase[i,j]
+        del Slices, RevSlices
+        
+        
+    freqs = Fs/NFFT*np.arange(numFreqs)
+    print "FREQS ARE: ", freqs
+    return Cxy, Phase, freqs
+
+
+
+
 
 def run_all(res_dict, lag, start, stop):
     for i in range(40):
