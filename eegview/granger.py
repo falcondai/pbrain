@@ -220,7 +220,7 @@ def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, prog
         RevSlices = np.zeros((numSlices, 1))
         counter += 1
         counter2 = 0
-        print i,j
+        #print i,j
         for iSlice in slices: # FOR EACH TRIAL
             thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, i] #this is the line that reads sections of epochs
             thisSlice2 = X[ind[iSlice]:ind[iSlice]+newLength, j] 
@@ -233,12 +233,12 @@ def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, prog
             drev = np.vstack((thisSlice2,thisSlice)).T
             res = gtest.grangercausalitytests(d,maxlag,verbose=False)
             resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
-            print "RES: ", res 
+            #print "RES: ", res 
             presult = res[maxlag][0][typedict[gv1]][not gv2]
             prev_result = resrev[maxlag][0][typedict[gv1]][not gv2]
             fresult = np.log(res[maxlag][0][typedict[gv1]][gv2])
             frev_result = np.log(resrev[maxlag][0][typedict[gv1]][gv2])
-            print "RESULTS: ", fresult, frev_result
+            #print "RESULTS: ", fresult, frev_result
             if presult <= threshold and prev_result > threshold:
                 Slices[counter2] = fresult
                 RevSlices[counter2] = 0.
@@ -268,7 +268,7 @@ def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, prog
         
         
     freqs = Fs/NFFT*np.arange(numFreqs)
-    print "FREQS ARE: ", freqs
+    #print "FREQS ARE: ", freqs
     return Cxy, Phase, freqs
 
 
