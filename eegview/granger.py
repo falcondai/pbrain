@@ -378,9 +378,14 @@ class DDTF():
         self.canvas = FigureCanvas(self.fig)  # a gtk.DrawingArea
         self.canvas.show()
         vbox.pack_start(self.canvas, True, True)
-        self.e1,self.e2,self.e3 = signal_gen.signal_gen(3,.1,.001)
+        (self.e1,self.e2,self.e3) = signal_gen.signal_gen(3,.1,.001)
 
-
+    
+        c = 0
+        for i in self.e1:
+            print i, self.e2[c]
+            c += 1
+    
         self.ax1 = self.fig.add_subplot(431, title=ttle1)
         self.ax1.set_xlim(0,60)
         self.ax1.set_ylim(0,1)
@@ -495,19 +500,19 @@ class DDTF():
                 Sxx=Sxx+(fx * fx.conj())
                 # print "Sxx2 ", Sxx.shape
                 Syy=Syy+(fy * fy.conj())
-                Szz=Szz+(fx * fz.conj())
-                Sxy=Sxy+(fx * fx.conj())
-                Sxz=Sxz+(fx * fy.conj())
-                Syz=Syz+(fy * fy.conj())
+                Szz=Szz+(fz * fz.conj())
+                Sxy=Sxy+(fx * fy.conj())
+                Sxz=Sxz+(fx * fz.conj())
+                Syz=Syz+(fy * fz.conj())
 
                 # print "Sxx shape: ", Sxx.shape
                 # print "Sxy shape: ", Sxy.shape
                 # print "Szy shape: ", Sxx.shape
                 # print "Syz shape: ", Syz.shape
 
-                Syx = Sxy.conj().T
-                Szx = Sxz.conj().T
-                Szy = Syz.conj().T
+                Syx = Sxy.conj()
+                Szx = Sxz.conj()
+                Szy = Syz.conj()
 
             S11=abs(Sxx)**2
             S12=abs(Sxy)**2

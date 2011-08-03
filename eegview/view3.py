@@ -46,6 +46,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk, gobject
 import numpy
+import signal_gen
 
 try:
 	set
@@ -88,6 +89,7 @@ from image_manager import ImageManager
 from grid_manager import GridManager
 from mesh_manager import MeshManager
 from coh_explorer import CohExplorer
+import granger
 
 from mpl_windows import VoltageMapWin
 
@@ -671,7 +673,7 @@ class View3(gtk.Window, Observer):
             elif label=='cohphase':
                 self.plot_normed_data('cohphase')
                 return
-            else:
+	    else:
                 error_msg('Unrecognized label %s' % label,
                           parent=self)
                 return
@@ -1770,9 +1772,6 @@ class View3(gtk.Window, Observer):
 
         try: self.cohereResults
         except AttributeError:  self.compute_coherence()
-
-
-
         
         win = gtk.Window()
         win.set_name("Coherence by distance")
@@ -1781,11 +1780,9 @@ class View3(gtk.Window, Observer):
         tmin, tmax = self.eegplot.get_time_lim()
         win.set_title("View3: " + self.eeg.filename + " " + self.csv_fname + "\t" + self._activeBand + "\t" + str(tmin) +":" + str(tmax))
                 
-
         vbox = gtk.VBox(spacing=3)
         win.add(vbox)
         vbox.show()
-
 
         fig = Figure(figsize=(7,5), dpi=72)
 
@@ -1793,26 +1790,21 @@ class View3(gtk.Window, Observer):
         self.canvas.show()
         vbox.pack_start(self.canvas, True, True)
 
-
         freqs, Cxy, Pxy = self.cohereResults
         ret = self.get_cxy_pxy_cutoff(Cxy, Pxy)
         if ret is None: return
         dvec, cvec, cxy, pxy, predicted, pars, normedvec, cutoff = ret
-        print pxy
-
+        # print pxy
             
         threshType, threshVal = self.thresholdParams
         print "plotting normed data!"
-        
-        
-        
-        
-        
+         
         if pars is None:
             bandind = self.get_band_ind()
             ax = fig.add_subplot(111)
             #ax.plot(dvec, cvec, 'b,')
-            
+              
+
             counter = 0
             roc = 1./180
             assert(dvec.shape == cvec.shape)
