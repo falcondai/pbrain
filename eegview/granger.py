@@ -8,6 +8,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 from matplotlib.backends.backend_gtkagg import NavigationToolbar
 from matplotlib.figure import Figure
+import ddtf2
 
 
 import signal_gen
@@ -73,7 +74,7 @@ def detrend_none(x):
     return x
 
 
-def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
+def old_granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
     threshold = .05/(len(ij)*2)
     oldNFFT = NFFT
     NFFT = newLength
@@ -167,6 +168,103 @@ def granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progr
             Cxy[i,j] = 0
             Phase[i,j] = 0
 
+    
+        # print typedict[gv1],gv2
+        print "RESIS: ", Cxy[i,j], "RESULT ", result, "REVRESULT ", rev_result
+
+        
+        
+    print "NFFT, NUMFREQS: ", NFFT, numFreqs
+    freqs = Fs/NFFT*np.arange(numFreqs)
+    print "FREQS ARE: ", freqs
+    return Cxy, Phase, freqs
+
+
+def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
+    threshold = .05/(len(ij)*2)
+    oldNFFT = NFFT
+    NFFT = newLength
+    numRows, numCols = X.shape
+
+    if numRows < NFFT:
+        tmp = X
+        X = np.zeros( (NFFT, numCols), X.dtype)
+        X[:numRows,:] = tmp
+        del tmp
+
+    numRows, numCols = X.shape
+    # get all the columns of X that we are interested in by checking
+    # the ij tuples
+    allColumns = set()
+    for i,j in ij:
+        allColumns.add(i); allColumns.add(j)
+    Ncols = len(allColumns)
+
+    # for real X, ignore the negative frequencies
+    if np.iscomplexobj(X): numFreqs = NFFT
+    else: numFreqs = NFFT//2+1
+
+    if cbook.iterable(window):
+        assert(len(window) == NFFT)
+        windowVals = window
+    else:
+        windowVals = window_hanning(np.ones(NFFT, X.dtype)) #I changed this from window to window_hanning. window was not doing anything!! -eli
+
+    ind = range(offset, int(numRows-newLength+1), int(oldNFFT-noverlap)) #coherence calcs on each sweep start at offset
+    numSlices = len(ind)
+    FFTSlices = {}
+    Pxx = {}
+    if newLength > oldNFFT: #make sure that the newlength is shorter than the segment (epoch) length (see below)
+        newLength = oldNFFT
+    slices = range(numSlices)
+    # normVal = np.linalg.norm(windowVals)**2
+
+    for iCol in allColumns:
+        progressCallback(i/Ncols, 'Cacheing FFTs')
+        Slices = np.zeros( (numSlices, newLength))
+        for iSlice in slices:
+            #thisSlice = X[ind[iSlice]:ind[iSlice]+NFFT, iCol] #this is the line that reads the data normally
+            thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, iCol] #this is the line that reads sections of epochs
+            print "GRANGER TESTING: ", ind[iSlice], " to ", ind[iSlice] + newLength
+            print "shape of all: ", Slices.shape
+            print "shape of slice: ", thisSlice.shape
+            #thisSlice = windowVals*detrend(thisSlice)
+            Slices[iSlice] = thisSlice # = np.fft.fft(thisSlice)[:numFreqs]
+        #FFTSlices[iCol] = Slices
+        Pxx[iCol] = np.mean(Slices,axis=0) # / normVal
+        print "shape of pxx one col: ", Pxx[iCol].shape
+        # print Pxx[iCol]
+    del Slices, ind, windowVals
+
+    Cxy = {}
+    Phase = {}
+    count = 0
+
+    N = len(ij)
+
+    for i,j in ij:
+        count += 1
+        if count%10==0:
+            progressCallback(count/N, 'Computing coherences')
+        
+        # d = np.vstack((Pxx[i],Pxx[j])).T
+        # drev = np.vstack((Pxx[j],Pxx[i])).T
+        # res = gtest.grangercausalitytests(d,maxlag,verbose=False)
+        # resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
+        f, result, rev_result = ddtf2.do_ddtf(Pxx[i],Pxx[j],sample_rate=500,step=oldNFFT)
+        # print "looking at: ", res[maxlag][0]
+
+        # this gets the p value
+        # result = res[maxlag][0][typedict[gv1]][not gv2]
+        # rev_result = resrev[maxlag][0][typedict[gv1]][not gv2]
+        Cxy[i,j] = result # max((result, rev_result))
+        # direction = (result,rev_result).index(Cxy[i,j])
+        # if direction == 0:
+        #     Phase[i,j] = 10
+        # else:
+        Phase[i,j] = -10
+
+        print "FREQUENCIES!!! ", f
     
         # print typedict[gv1],gv2
         print "RESIS: ", Cxy[i,j], "RESULT ", result, "REVRESULT ", rev_result

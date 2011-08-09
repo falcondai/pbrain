@@ -826,7 +826,7 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
     if granger_on:
-        Cxy, Phase, freqs = granger.granger_test2(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
+        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
     else:
         if returnPxx:
             try:
