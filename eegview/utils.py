@@ -366,7 +366,10 @@ def cohere_bands(cxy, phase, freqs, keys,
     # wise as a matrix to conserve memory.  dimensions of matrix are
     # len(ij)*len(freqs), which for NFFT=2048 and 64 electrodes
     # pairwise is 2016*2048 coherences and phases.  8 million floats.
-
+    
+    #TEMPORARY:
+    granger = False
+    
     Nbands = len(bands)
     count = 0
     Nkeys = len(keys)
@@ -376,6 +379,7 @@ def cohere_bands(cxy, phase, freqs, keys,
         if count%20==0:
             progressCallback(count/Nkeys,  'Averaging over bands')
         thisCxy = cxy[key]
+
         thisPhase = phase[key]
         if not granger:
             ac = zeros( (Nbands,), thisCxy.dtype)
@@ -741,7 +745,7 @@ def get_best_exp_params(x, y, guess=(1.0, -.5, 0.0)):
 
 
 def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, indMax=None,
-                      data=None, returnPxx=False, granger_on = False, maxlag=3, gv1 = 0, gv2 = 0, **kwargs):
+                      data=None, returnPxx=False, granger_on = False, maxlag=3, gv1 = 0, gv2 = 0,eegfreq=500, **kwargs):
     """
     FUNC: cohere_pairs_eeg
     DESCR: Cxy, Phase, freqs = cohere_pairs_eeg(  ...)
@@ -822,11 +826,11 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     if data is None: data = eeg.data
 
     #print "cohere_pairs_eeg: data.shape is ", data.shape
-    
+    All = {}
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
     if granger_on:
-        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
+        Cxy, Phase, freqs,All = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
     else:
         if returnPxx:
             try:
@@ -855,18 +859,33 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
         e1, e2 = keyEOI
         seen[i] = e1
         seen[j] = e2
-    #print Cxy
-    #print Phase, "&*&*&"
-    #print freqs
+
+    
+    # the ddtf key manipulation
+    All_new_cxy = []
+    All_new_phase = []
+    if All != {}:
+        for Cxy in All.values():
+            keys = Cxy.keys()
+            keys.sort()
+            assert(len(ij)==len(eoiPairs))
+            for keyIJ, keyEOI in zip(ij, eoiPairs):
+                Cxy[keyEOI] = Cxy[keyIJ]
+                del Cxy[keyIJ]
+                # Phase[keyEOI] = Phase[keyIJ]
+                # del Phase[keyIJ]
+            All_new_cxy.append(Cxy)
+
+                
     if returnPxx:
         for i, ei in seen.items():
             Pxx[ei] = Pxx[i]
             del Pxx[i]
 
     if returnPxx:
-        return Cxy, Phase, freqs, Pxx
+        return Cxy, Phase, freqs, Pxx, All_new_cxy
     else:
-        return Cxy, Phase, freqs
+        return Cxy, Phase, freqs, All_new_cxy
 
 def window_hanning(x):
     """

@@ -181,10 +181,14 @@ def old_granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, p
 
 
 def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
+    # note that Fs is the frequency of the eeg spectrum, and should never actually be 2
     threshold = .05/(len(ij)*2)
     oldNFFT = NFFT
     NFFT = newLength
     numRows, numCols = X.shape
+    print "DDTF: oldNFFT, NFFT, newLength, xshape ", oldNFFT,NFFT,newLength,X.shape
+    duration = (oldNFFT/Fs) # duration in seconds of each slice, which for ddtf should be the length of a trial
+    print "DDTF: trial length is ", duration, " Fs is ", Fs
 
     if numRows < NFFT:
         tmp = X
@@ -225,9 +229,9 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
         for iSlice in slices:
             #thisSlice = X[ind[iSlice]:ind[iSlice]+NFFT, iCol] #this is the line that reads the data normally
             thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, iCol] #this is the line that reads sections of epochs
-            print "GRANGER TESTING: ", ind[iSlice], " to ", ind[iSlice] + newLength
-            print "shape of all: ", Slices.shape
-            print "shape of slice: ", thisSlice.shape
+            # print "GRANGER TESTING: ", ind[iSlice], " to ", ind[iSlice] + newLength
+            # print "shape of all: ", Slices.shape
+            # print "shape of slice: ", thisSlice.shape
             #thisSlice = windowVals*detrend(thisSlice)
             Slices[iSlice] = thisSlice # = np.fft.fft(thisSlice)[:numFreqs]
         #FFTSlices[iCol] = Slices
@@ -241,7 +245,8 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
     count = 0
 
     N = len(ij)
-
+    All_final = {}
+    All = {}
     for i,j in ij:
         count += 1
         if count%10==0:
@@ -251,7 +256,7 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
         # drev = np.vstack((Pxx[j],Pxx[i])).T
         # res = gtest.grangercausalitytests(d,maxlag,verbose=False)
         # resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
-        f, result, rev_result = ddtf2.do_ddtf(Pxx[i],Pxx[j],sample_rate=500,step=oldNFFT)
+        f, result, rev_result,final = ddtf2.do_ddtf_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration/4)
         # print "looking at: ", res[maxlag][0]
 
         # this gets the p value
@@ -262,19 +267,27 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
         # if direction == 0:
         #     Phase[i,j] = 10
         # else:
-        Phase[i,j] = -10
+        Phase[i,j] = result
+        counter = 0
+        for entry in final:
+            try:
+                All_final[counter][i,j] = entry
+            except:
+                All_final[counter] = {}
+                All_final[counter][i,j] = entry
+            counter += 1
 
-        print "FREQUENCIES!!! ", f
+        # print "FREQUENCIES!!! ", f
     
         # print typedict[gv1],gv2
-        print "RESIS: ", Cxy[i,j], "RESULT ", result, "REVRESULT ", rev_result
+        # print "RESIS: ", Cxy[i,j], "RESULT ", result, "REVRESULT ", rev_result
 
         
         
-    print "NFFT, NUMFREQS: ", NFFT, numFreqs
-    freqs = Fs/NFFT*np.arange(numFreqs)
+    print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
+    freqs = f # Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
-    return Cxy, Phase, freqs
+    return Cxy, Phase, freqs, All_final
 
 
 
