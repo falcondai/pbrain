@@ -192,12 +192,13 @@ class CohExplorer(gtk.Window, Observer):
         
 
         chooser = gtk.FileChooserDialog(title="please create or choose a file", action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK))
+        chooser.connect("destroy", chooser.destroy)
         response = chooser.run()
         if response == gtk.RESPONSE_OK:
             savefile = chooser.get_filename()
-        else:
-            chooser.destroy()
-            return
+
+        chooser.destroy()
+            
         
         f = open(savefile, 'ab')
         for key in self.ysfull:
