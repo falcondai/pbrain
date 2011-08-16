@@ -317,21 +317,21 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
     fNyq = sample_rate/2
     df = 1/(step*dt)
     f = np.arange(0,fNyq,df) #Frequency axis for the FFT
-    print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
+    # print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
     count = 0
     end_step = N - duration*sample_rate
     steps = np.arange(0,end_step,increment*sample_rate)
     total_steps = len(steps)
-    print "STEPS: ", steps, total_steps
+    # print "STEPS: ", steps, total_steps
     final = np.zeros((total_steps, step - 1))
-    print "end_step ", end_step
-    print "stepping by ", increment * sample_rate
+    # print "end_step ", end_step
+    # print "stepping by ", increment * sample_rate
     for w in np.arange(0,end_step, increment * sample_rate):
         x=el1[w:w+duration*sample_rate] # should this be - 1 or 2?
         y=el2[w:w+duration*sample_rate]
         # z=el3[w:w+duration*sample_rate]
         # Initialize the Cross-Spectral arrays for averaging
-        print "step first is : ", step
+        # print "step first is : ", step
         Sxx=np.zeros((1,step - 1)); # - 1 here?
         # print "Sxx: " , Sxx.shape
         Syy=Sxx
@@ -349,12 +349,12 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
         A = np.vstack([xtemp,xtemp_ones]).T
         # print "A shape: ", A.shape, x[0:0+step-1].shape
         inner_end_step = sample_rate*duration - step
-        print "inner_end_step ", inner_end_step
-        print "step ", step
+        # print "inner_end_step ", inner_end_step
+        # print "step ", step
         for i in np.arange(0,inner_end_step - 1,step):
             # print "X SHAPE ", x[i:i+step-1].shape, i
             m,b = np.linalg.lstsq(A,x[i:i+step-1])[0] # the minus 1?
-            print "m, b: ", m, b
+            # print "m, b: ", m, b
             trend = m*xtemp + b
             # print "istep : ", (i+step-1)
             x[i:i+step-1] = x[i:i+step-1] - trend # detrend
@@ -417,7 +417,7 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
         # NS31 = S31 / sumS3
         # NS32 = S32 / sumS3
         # NS33 = S33 / S33.max()
-        print count
+        # print count
         # print "finalshape: ", final.shape, NS12[0].shape, final[count].shape, count
         final[count] = NS12[0]
         count += 1

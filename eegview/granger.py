@@ -260,7 +260,7 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
         # print "FREQUENCIES!!! ", f
     
         # print typedict[gv1],gv2
-        print "RESIS: ", Cxy[i,j]
+        # print "RESIS: ", Cxy[i,j]
 
         
         
