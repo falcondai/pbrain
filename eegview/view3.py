@@ -862,7 +862,7 @@ class View3(gtk.Window, Observer):
                 dlg.destroy()
                 break
 
-    def print_coh(self, num=-1,*args):
+    def print_coh(self,*args):
         try: self.cohereResults
         except AttributeError:  self.compute_coherence()
 
@@ -886,12 +886,8 @@ class View3(gtk.Window, Observer):
             keys = self.get_supra_threshold_keys(len(self.eoi), cxy, pxy, cutoff, None, maxd)
 
         fh = file(self.cohFile, 'ab')
-	print "PRINT COH INDEX IS : ", num
-	if num==-1:
-		header = '[sweep length]\n%d\n[length]\n%d\n[offset]\n%d'%(self.NFFT,self.newLength,self.offset)
-	else:
-		header = '[sweep length]\n%d\n[length]\n%d\n[offset]\n%d'%(self.NFFT,self.newLength,num)
-        print>>fh, header 
+	header = '[sweep length]\n%d\n[length]\n%d\n[offset]\n%d'%(self.NFFT,self.newLength,self.offset)
+	print>>fh, header 
         #print>>fh, 'E1,E2,delta 1-4,theta 4-8,alpha 8-12,beta 12-30,gamma 30-50,high gamma 70-100,delta phase,theta phase,alpha phase,beta phase,gamma phase,high gamma phase'
         keys.sort()
         dumpStrings = []
@@ -1647,7 +1643,7 @@ class View3(gtk.Window, Observer):
         bands = ( (1,4), (4,8), (8,12), (12,30), (30,50), (70,100) )
 	All = {}
         if self.buttonPxx.get_active():
-            Cxy, Phase, freqs, Pxx, All = cohere_pairs_eeg(
+            Cxy, Phase, freqs, Pxx = cohere_pairs_eeg(
                 eeg,
                 self.newLength,
                 self.NFFT,
@@ -1668,7 +1664,7 @@ class View3(gtk.Window, Observer):
             pxxBand = power_bands(Pxx, freqs, bands)
             self.pxxResults = pxxBand
         else:
-            Cxy, Phase, freqs, All = cohere_pairs_eeg(
+            Cxy, Phase, freqs = cohere_pairs_eeg(
                 eeg,
                 self.newLength,
                 self.NFFT,
@@ -1687,7 +1683,8 @@ class View3(gtk.Window, Observer):
 		gv2 = self.gv2
             )
             self.pxxResults = None
-        print "RETRIEVED ALL DATA! ", len(All)
+        """
+	print "RETRIEVED ALL DATA! ", len(All)
 	counter = 0
 	if All != {} and All != []:
             for entry in All:
@@ -1707,19 +1704,20 @@ class View3(gtk.Window, Observer):
                        self.print_coh(num=num)
 		counter += 1
         else:
-            cxyBands, phaseBands = cohere_bands(
-		    Cxy, Phase, freqs, self.eoiPairs, bands, granger,
-		    progressCallback=progress_callback
-		    )
-	    self.cohereResults  = freqs, cxyBands, phaseBands
-	    self.broadcast(Observer.COMPUTE_COHERENCE,
-			   (tmin, tmax),
-			   self.eoiPairs,
-			   self.cohereResults,
-			   self.pxxResults)
-	    if self.buttonDump.get_active():
-                if (self.cohFile != None):
-	            self.print_coh()
+	"""
+	cxyBands, phaseBands = cohere_bands(
+		Cxy, Phase, freqs, self.eoiPairs, bands, granger,
+		progressCallback=progress_callback
+		)
+	self.cohereResults  = freqs, cxyBands, phaseBands
+	self.broadcast(Observer.COMPUTE_COHERENCE,
+		       (tmin, tmax),
+		       self.eoiPairs,
+		       self.cohereResults,
+		       self.pxxResults)
+	if self.buttonDump.get_active():
+            if (self.cohFile != None):
+                self.print_coh()
         
     def get_band_ind(self):
         'Get the index into the band summary coherences'

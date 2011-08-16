@@ -187,7 +187,7 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
     NFFT = newLength
     numRows, numCols = X.shape
     print "DDTF: oldNFFT, NFFT, newLength, xshape ", oldNFFT,NFFT,newLength,X.shape
-    duration = (oldNFFT/Fs) # duration in seconds of each slice, which for ddtf should be the length of a trial
+    duration = (NFFT/Fs) # duration in seconds of each slice
     print "DDTF: trial length is ", duration, " Fs is ", Fs
 
     if numRows < NFFT:
@@ -218,8 +218,6 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
     numSlices = len(ind)
     FFTSlices = {}
     Pxx = {}
-    if newLength > oldNFFT: #make sure that the newlength is shorter than the segment (epoch) length (see below)
-        newLength = oldNFFT
     slices = range(numSlices)
     # normVal = np.linalg.norm(windowVals)**2
 
@@ -227,17 +225,11 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
         progressCallback(i/Ncols, 'Cacheing FFTs')
         Slices = np.zeros( (numSlices, newLength))
         for iSlice in slices:
-            #thisSlice = X[ind[iSlice]:ind[iSlice]+NFFT, iCol] #this is the line that reads the data normally
             thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, iCol] #this is the line that reads sections of epochs
-            # print "GRANGER TESTING: ", ind[iSlice], " to ", ind[iSlice] + newLength
-            # print "shape of all: ", Slices.shape
-            # print "shape of slice: ", thisSlice.shape
-            #thisSlice = windowVals*detrend(thisSlice)
             Slices[iSlice] = thisSlice # = np.fft.fft(thisSlice)[:numFreqs]
-        #FFTSlices[iCol] = Slices
         Pxx[iCol] = np.mean(Slices,axis=0) # / normVal
         print "shape of pxx one col: ", Pxx[iCol].shape
-        # print Pxx[iCol]
+        
     del Slices, ind, windowVals
 
     Cxy = {}
@@ -247,47 +239,35 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
     N = len(ij)
     All_final = {}
     All = {}
+    iters = 4
     for i,j in ij:
         count += 1
         if count%10==0:
             progressCallback(count/N, 'Computing coherences')
         
-        # d = np.vstack((Pxx[i],Pxx[j])).T
-        # drev = np.vstack((Pxx[j],Pxx[i])).T
-        # res = gtest.grangercausalitytests(d,maxlag,verbose=False)
-        # resrev = gtest.grangercausalitytests(drev,maxlag,verbose=False)
-        f, result, rev_result,final = ddtf2.do_ddtf_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration/4)
-        # print "looking at: ", res[maxlag][0]
-
-        # this gets the p value
-        # result = res[maxlag][0][typedict[gv1]][not gv2]
-        # rev_result = resrev[maxlag][0][typedict[gv1]][not gv2]
+        f, result = ddtf2.do_ddtf_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
         Cxy[i,j] = result # max((result, rev_result))
-        # direction = (result,rev_result).index(Cxy[i,j])
-        # if direction == 0:
-        #     Phase[i,j] = 10
-        # else:
         Phase[i,j] = result
-        counter = 0
-        for entry in final:
-            try:
-                All_final[counter][i,j] = entry
-            except:
-                All_final[counter] = {}
-                All_final[counter][i,j] = entry
-            counter += 1
+        # counter = 0
+        # for entry in final:
+        #     try:
+        #         All_final[counter][i,j] = entry
+        #     except:
+        #         All_final[counter] = {}
+        #         All_final[counter][i,j] = entry
+        #     counter += 1
 
         # print "FREQUENCIES!!! ", f
     
         # print typedict[gv1],gv2
-        # print "RESIS: ", Cxy[i,j], "RESULT ", result, "REVRESULT ", rev_result
+        print "RESIS: ", Cxy[i,j]
 
         
         
     print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
     freqs = f # Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
-    return Cxy, Phase, freqs, All_final
+    return Cxy, Phase, freqs
 
 
 

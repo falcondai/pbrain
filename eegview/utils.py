@@ -830,7 +830,7 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
     if granger_on:
-        Cxy, Phase, freqs,All = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
+        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
     else:
         if returnPxx:
             try:
@@ -860,7 +860,7 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
         seen[i] = e1
         seen[j] = e2
 
-    
+    """
     # the ddtf key manipulation
     All_new_cxy = []
     All_new_phase = []
@@ -875,7 +875,7 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
                 # Phase[keyEOI] = Phase[keyIJ]
                 # del Phase[keyIJ]
             All_new_cxy.append(Cxy)
-
+    """
                 
     if returnPxx:
         for i, ei in seen.items():
@@ -883,9 +883,10 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
             del Pxx[i]
 
     if returnPxx:
-        return Cxy, Phase, freqs, Pxx, All_new_cxy
+        return Cxy, Phase, freqs, Pxx
     else:
-        return Cxy, Phase, freqs, All_new_cxy
+        return Cxy, Phase, freqs
+    
 
 def window_hanning(x):
     """
