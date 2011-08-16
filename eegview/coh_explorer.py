@@ -195,7 +195,6 @@ class CohExplorer(gtk.Window, Observer):
         response = chooser.run()
         if response == gtk.RESPONSE_OK:
             savefile = chooser.get_filename()
-            entryFile.set_text(filename)
         else:
             chooser.destroy()
             return
