@@ -188,11 +188,23 @@ class CohExplorer(gtk.Window, Observer):
     
     
     def save(self, button):
-        savefile = fmanager.get_filename(title="create save file:")
+        entryFile = gtk.Entry()
+        
+
+        chooser = gtk.FileChooserDialog(title="please create or choose a file", action=gtk.FILE_CHOOSER_ACTION_SAVE, buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_SAVE,gtk.RESPONSE_OK))
+        response = chooser.run()
+        if response == gtk.RESPONSE_OK:
+            savefile = chooser.get_filename()
+            entryFile.set_text(filename)
+        else:
+            chooser.destroy()
+            return
+        
         f = open(savefile, 'ab')
         for key in self.ysfull:
             f.write("%s %s, %g\n" % (key[0], key[1], self.ysfull[key]))
         f.close
+        return
     
     def load_chans(self, button):
         dlg = gtk.Dialog("Channel Manipulation")

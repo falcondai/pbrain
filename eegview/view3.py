@@ -46,6 +46,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk, gobject
 import numpy
+import signal_gen
 
 try:
 	set
@@ -88,6 +89,7 @@ from image_manager import ImageManager
 from grid_manager import GridManager
 from mesh_manager import MeshManager
 from coh_explorer import CohExplorer
+import granger
 
 from mpl_windows import VoltageMapWin
 
@@ -671,7 +673,7 @@ class View3(gtk.Window, Observer):
             elif label=='cohphase':
                 self.plot_normed_data('cohphase')
                 return
-            else:
+	    else:
                 error_msg('Unrecognized label %s' % label,
                           parent=self)
                 return
@@ -860,7 +862,7 @@ class View3(gtk.Window, Observer):
                 dlg.destroy()
                 break
 
-    def print_coh(self, *args):
+    def print_coh(self,*args):
         try: self.cohereResults
         except AttributeError:  self.compute_coherence()
 
@@ -884,8 +886,8 @@ class View3(gtk.Window, Observer):
             keys = self.get_supra_threshold_keys(len(self.eoi), cxy, pxy, cutoff, None, maxd)
 
         fh = file(self.cohFile, 'ab')
-        header = '[sweep length]\n%d\n[length]\n%d\n[offset]\n%d'%(self.NFFT,self.newLength,self.offset)
-        print>>fh, header 
+	header = '[sweep length]\n%d\n[length]\n%d\n[offset]\n%d'%(self.NFFT,self.newLength,self.offset)
+	print>>fh, header 
         #print>>fh, 'E1,E2,delta 1-4,theta 4-8,alpha 8-12,beta 12-30,gamma 30-50,high gamma 70-100,delta phase,theta phase,alpha phase,beta phase,gamma phase,high gamma phase'
         keys.sort()
         dumpStrings = []
@@ -910,7 +912,9 @@ class View3(gtk.Window, Observer):
         dumpStrings.sort()
         for s in dumpStrings:
             print>>fh, s
+	print "FOR INSTANCE: ", dumpStrings[0]
         print "coherence saved to ", self.cohFile
+	fh.close()
         
     def voltage_map(self, button, *args):
         win = VoltageMapWin(self)
@@ -1637,6 +1641,7 @@ class View3(gtk.Window, Observer):
         print "View3.compute_coherence(): NFFT, dt: ", self.NFFT, " , ", dt
         #print "View3.compute_coherence(): self.eoiPairs = ", self.eoiPairs
         bands = ( (1,4), (4,8), (8,12), (12,30), (30,50), (70,100) )
+	All = {}
         if self.buttonPxx.get_active():
             Cxy, Phase, freqs, Pxx = cohere_pairs_eeg(
                 eeg,
@@ -1678,19 +1683,39 @@ class View3(gtk.Window, Observer):
 		gv2 = self.gv2
             )
             self.pxxResults = None
-        
-        
-        cxyBands, phaseBands = cohere_bands(
-            Cxy, Phase, freqs, self.eoiPairs, bands, granger,
+        """
+	print "RETRIEVED ALL DATA! ", len(All)
+	counter = 0
+	if All != {} and All != []:
+            for entry in All:
+                # print "ENTRY!", entry
+                # print "ENTRYSHAPE: ", entry.shape
+                # print entry.keys()
+	        cxyBands, phaseBands = cohere_bands(
+            entry, entry, freqs, self.eoiPairs, bands, granger,
             progressCallback=progress_callback
             )
-        self.cohereResults  = freqs, cxyBands, phaseBands
-        self.broadcast(Observer.COMPUTE_COHERENCE,
-                       (tmin, tmax),
-                       self.eoiPairs,
-                       self.cohereResults,
-                       self.pxxResults)
-        if self.buttonDump.get_active():
+		self.cohereResults  = freqs, cxyBands, phaseBands
+
+                if self.buttonDump.get_active():
+                   if (self.cohFile != None):
+                       num = (counter / len(All)) * self.NFFT
+		       print "index is now: ", num
+                       self.print_coh(num=num)
+		counter += 1
+        else:
+	"""
+	cxyBands, phaseBands = cohere_bands(
+		Cxy, Phase, freqs, self.eoiPairs, bands, granger,
+		progressCallback=progress_callback
+		)
+	self.cohereResults  = freqs, cxyBands, phaseBands
+	self.broadcast(Observer.COMPUTE_COHERENCE,
+		       (tmin, tmax),
+		       self.eoiPairs,
+		       self.cohereResults,
+		       self.pxxResults)
+	if self.buttonDump.get_active():
             if (self.cohFile != None):
                 self.print_coh()
         
@@ -1770,9 +1795,6 @@ class View3(gtk.Window, Observer):
 
         try: self.cohereResults
         except AttributeError:  self.compute_coherence()
-
-
-
         
         win = gtk.Window()
         win.set_name("Coherence by distance")
@@ -1781,11 +1803,9 @@ class View3(gtk.Window, Observer):
         tmin, tmax = self.eegplot.get_time_lim()
         win.set_title("View3: " + self.eeg.filename + " " + self.csv_fname + "\t" + self._activeBand + "\t" + str(tmin) +":" + str(tmax))
                 
-
         vbox = gtk.VBox(spacing=3)
         win.add(vbox)
         vbox.show()
-
 
         fig = Figure(figsize=(7,5), dpi=72)
 
@@ -1793,26 +1813,21 @@ class View3(gtk.Window, Observer):
         self.canvas.show()
         vbox.pack_start(self.canvas, True, True)
 
-
         freqs, Cxy, Pxy = self.cohereResults
         ret = self.get_cxy_pxy_cutoff(Cxy, Pxy)
         if ret is None: return
         dvec, cvec, cxy, pxy, predicted, pars, normedvec, cutoff = ret
-        print pxy
-
+        # print pxy
             
         threshType, threshVal = self.thresholdParams
         print "plotting normed data!"
-        
-        
-        
-        
-        
+         
         if pars is None:
             bandind = self.get_band_ind()
             ax = fig.add_subplot(111)
             #ax.plot(dvec, cvec, 'b,')
-            
+              
+
             counter = 0
             roc = 1./180
             assert(dvec.shape == cvec.shape)
@@ -1826,7 +1841,7 @@ class View3(gtk.Window, Observer):
                 c += 1
                 r = (1 - phase*roc)
                 g = (phase * roc)
-                print phase, r, g
+
                 if (r < 0):
                     r = 0
                 if (r > 1):
