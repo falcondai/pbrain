@@ -180,7 +180,7 @@ def old_granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, p
     return Cxy, Phase, freqs
 
 
-def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
+def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none):
     # note that Fs is the frequency of the eeg spectrum, and should never actually be 2
     threshold = .05/(len(ij)*2)
     oldNFFT = NFFT
@@ -228,7 +228,7 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
             thisSlice = X[ind[iSlice]:ind[iSlice]+newLength, iCol] #this is the line that reads sections of epochs
             Slices[iSlice] = thisSlice # = np.fft.fft(thisSlice)[:numFreqs]
         Pxx[iCol] = np.mean(Slices,axis=0) # / normVal
-        print "shape of pxx one col: ", Pxx[iCol].shape
+        # print "shape of pxx one col: ", Pxx[iCol].shape
         
     del Slices, ind, windowVals
 
@@ -245,29 +245,25 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progress
         if count%10==0:
             progressCallback(count/N, 'Computing coherences')
         
-        f, result = ddtf2.do_ddtf_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
-        Cxy[i,j] = result # max((result, rev_result))
-        Phase[i,j] = result
-        # counter = 0
-        # for entry in final:
-        #     try:
-        #         All_final[counter][i,j] = entry
-        #     except:
-        #         All_final[counter] = {}
-        #         All_final[counter][i,j] = entry
-        #     counter += 1
+        f, final = ddtf2.do_ddtf_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
+        # Cxy[i,j] = result # max((result, rev_result))
+        # Phase[i,j] = result
+        counter = 0
+        for entry in final:
+            try:
+                All_final[counter][i,j] = entry
+            except:
+                All_final[counter] = {}
+                All_final[counter][i,j] = entry
+            counter += 1
 
-        # print "FREQUENCIES!!! ", f
+        print "FREQUENCIES!!! ", f
     
-        # print typedict[gv1],gv2
-        # print "RESIS: ", Cxy[i,j]
-
-        
-        
+                
     print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
     freqs = f # Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
-    return Cxy, Phase, freqs
+    return All_final, freqs
 
 
 

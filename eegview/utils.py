@@ -367,9 +367,6 @@ def cohere_bands(cxy, phase, freqs, keys,
     # len(ij)*len(freqs), which for NFFT=2048 and 64 electrodes
     # pairwise is 2016*2048 coherences and phases.  8 million floats.
     
-    #TEMPORARY:
-    granger = False
-    
     Nbands = len(bands)
     count = 0
     Nkeys = len(keys)
