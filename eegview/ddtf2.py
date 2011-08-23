@@ -307,9 +307,9 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
     
     # notes: duration is the length of a window in seconds - note that this is a moving window
     # increment is the length of a step in seconds
-    duration = duration/4
-    increment = duration/4
-    step = 64
+    duration = duration/4 # .02
+    increment = duration/4 # .005
+    step = 32
     # should step just default to 64 or should it be increment in points??
     # step is the num points in an fft-analysis epoch
     N = len(el1)
@@ -318,15 +318,15 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
     df = 1/(step*dt)
     f = np.arange(0,fNyq,df) #Frequency axis for the FFT
     # print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
-    count = 0
-    end_step = N - duration*sample_rate
+    count = 0 # 40.96
+    end_step = N - duration*sample_rate # 10.24
     steps = np.arange(0,end_step,increment*sample_rate)
     total_steps = len(steps)
     # print "STEPS: ", steps, total_steps
     final = np.zeros((total_steps, step - 1))
     # print "end_step ", end_step
     # print "stepping by ", increment * sample_rate
-    for w in np.arange(0,end_step, increment * sample_rate):
+    for w in np.arange(0,end_step, increment * sample_rate): # 2.5
         x=el1[w:w+duration*sample_rate] # should this be - 1 or 2?
         y=el2[w:w+duration*sample_rate]
         # z=el3[w:w+duration*sample_rate]
