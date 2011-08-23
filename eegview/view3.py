@@ -71,7 +71,7 @@ from shared import fmanager
 from borgs import Shared
 
 from utils import filter_grand_mean, all_pairs_eoi, cohere_bands, power_bands,\
-     cohere_pairs, cohere_pairs_eeg, get_best_exp_params,\
+     cohere_pairs, cohere_pairs_eeg,get_best_exp_params,\
      get_exp_prediction, read_cohstat
 
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
@@ -90,6 +90,7 @@ from grid_manager import GridManager
 from mesh_manager import MeshManager
 from coh_explorer import CohExplorer
 import granger
+import ddtf2
 
 from mpl_windows import VoltageMapWin
 
@@ -712,6 +713,7 @@ class View3(gtk.Window, Observer):
         #toolbar2.append_widget(self.entryMaxDist, 'Maximum distace', '')
         #self.add_toolitem2(toolbar2, self.entryMaxDist, 'Maximum distance')
         self.add_toolbutton1(toolbar2, gtk.STOCK_EXECUTE, 'Compute Coherence', 'Private', compute_and_plot)
+	self.add_toolbutton1(toolbar2, gtk.STOCK_EXECUTE, 'Compute DDTF', 'Private', self.compute_ddtf)
         self.add_toolbutton1(toolbar2, gtk.STOCK_EXECUTE, 'Replot', 'Private', self.plot_band)
         
         self.add_separator(toolbar2)
@@ -1585,8 +1587,94 @@ class View3(gtk.Window, Observer):
             destroy = args[2]
             self.overlay_array(finishedFigure, init, destroy)
             
+    def compute_ddtf(self, setTime=None, *args):
+        tmin, tmax = self.eegplot.get_time_lim()
+        print "VIEW3.compute_coherence offset: ", self.offset
+        #set up the time display - only works for new coh calc functions?
+        self.timedisplay.SetText(0, "t = %3.2f" %((self.offset/self.eeg.freq) + (self.xmin/1000)))
+	eeg = self.eegplot.get_eeg()
+	
+        t, data = self.eeg.get_data(tmin, tmax)
+        if self.filterGM:            
+            data = filter_grand_mean(data)
+	def progress_callback(frac,  msg):
+            if frac<0 or frac>1: return
+	    self.progBar.set_fraction(frac)
+            while gtk.events_pending(): gtk.main_iteration()
+      
+	Cxyband_array = self.ddtf_pairs_eeg(
+                eeg,
+                self.newLength,
+                self.NFFT,
+                self.offset,
+                self.eoiPairs,
+                data = data,
+                detrend = detrend_none,
+                window = window_none,
+                noverlap = 0,
+                preferSpeedOverMemory = 1,
+                progressCallback = progress_callback,
+		)
 
-            
+
+    def ddtf_pairs_eeg(self, eeg, newLength, NFFT, offset, eoiPairs=None, window=None, noverlap = 0, indMin=0, indMax=None, data=None, progressCallback=None, **kwargs):
+        tmin, tmax = self.eegplot.get_time_lim()
+        amp = eeg.get_amp()
+        #print "UTILS AMP: ", amp
+	if eoiPairs is None:
+            eoiPairs = all_pairs_eoi( amp.to_eoi() )
+
+	offset = int(offset)
+	print "COHERE_PAIRS_EEG: int offset: ", offset 
+
+	m = amp.get_electrode_to_indices_dict()
+	ij = [ (m[e1], m[e2]) for e1, e2 in eoiPairs]
+	ij.sort()
+
+	print "COHERE_PAIRS EEG PAIRS LENGTH: ", len(ij), len(eoiPairs)
+
+	if data is None: data = eeg.data
+	if indMax is None: indMax = data.shape[0]
+	X = data[indMin:indMax]
+	All, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=progressCallback)
+	# the ddtf key manipulation
+	All_new_cxy = {}
+	if All != {}:
+	    for Cxykey in All: # get the number result
+		Cxy = All[Cxykey] # get the indiv pairdict of ddtf magnitudes
+		keys = Cxy.keys()
+		keys.sort() # this is the reverse of the sort above on ij
+		assert(len(ij)==len(eoiPairs))
+		for keyIJ, keyEOI in zip(ij, eoiPairs):
+		    Cxy[keyEOI] = Cxy[keyIJ]
+		    del Cxy[keyIJ]
+		    # Phase[keyEOI] = Phase[keyIJ]
+		    # del Phase[keyIJ]
+		All_new_cxy[Cxykey] = Cxy
+
+	# All_new_cxy is a dict of observation # => dict of pair => magnitude
+	# now we'll loop over the results and broadcast each one
+	bands = ( (1,4), (4,8), (8,12), (12,30), (30,50), (70,100) )
+	total = len(All_new_cxy.keys())
+	divided_offset = self.newLength / total
+	for Cxykey in All_new_cxy:
+	    Cxy = All_new_cxy[Cxykey]
+	    cxyBands, phaseBands = cohere_bands(
+		Cxy, Cxy, freqs, self.eoiPairs, bands, granger=False)
+	    self.cohereResults = freqs,cxyBands,cxyBands
+	    self.broadcast(Observer.COMPUTE_COHERENCE,
+		       (tmin, tmax),
+		       self.eoiPairs,
+		       self.cohereResults,
+		       None)
+	    if self.buttonDump.get_active():
+                if (self.cohFile != None):
+                    self.print_coh()
+	    self.plot_band()
+	    self.offset += divided_offset
+
+
+
     #COMPUTE COHERENCE: CALLED BY RECIEVE: SET_TIME_LIM
     #args are min and max time
     def compute_coherence(self, setTime=None, *args):
@@ -1642,6 +1730,7 @@ class View3(gtk.Window, Observer):
         #print "View3.compute_coherence(): self.eoiPairs = ", self.eoiPairs
         bands = ( (1,4), (4,8), (8,12), (12,30), (30,50), (70,100) )
 	All = {}
+
         if self.buttonPxx.get_active():
             Cxy, Phase, freqs, Pxx = cohere_pairs_eeg(
                 eeg,

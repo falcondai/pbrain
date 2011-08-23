@@ -307,8 +307,9 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
     
     # notes: duration is the length of a window in seconds - note that this is a moving window
     # increment is the length of a step in seconds
-    duration = duration/4 # .02
-    increment = duration/4 # .005
+    new_duration = duration/4
+    increment = new_duration/4
+
     step = 32
     # should step just default to 64 or should it be increment in points??
     # step is the num points in an fft-analysis epoch
@@ -318,17 +319,19 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
     df = 1/(step*dt)
     f = np.arange(0,fNyq,df) #Frequency axis for the FFT
     # print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
-    count = 0 # 40.96
-    end_step = N - duration*sample_rate # 10.24
+    count = 0
+    end_step = N - new_duration*sample_rate
+
     steps = np.arange(0,end_step,increment*sample_rate)
     total_steps = len(steps)
     # print "STEPS: ", steps, total_steps
-    final = np.zeros((total_steps, step - 1))
+    final = [] # np.zeros((total_steps, step - 1))
     # print "end_step ", end_step
     # print "stepping by ", increment * sample_rate
-    for w in np.arange(0,end_step, increment * sample_rate): # 2.5
-        x=el1[w:w+duration*sample_rate] # should this be - 1 or 2?
-        y=el2[w:w+duration*sample_rate]
+    for w in np.arange(0,end_step, increment * sample_rate):
+        x=el1[w:w+new_duration*sample_rate] # should this be - 1 or 2?
+        y=el2[w:w+new_duration*sample_rate]
+
         # z=el3[w:w+duration*sample_rate]
         # Initialize the Cross-Spectral arrays for averaging
         # print "step first is : ", step
@@ -337,10 +340,6 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
         Syy=Sxx
         # Szz=Sxx
         Sxy=Sxx
-        
-        # Sxz=Sxx
-        # Syz=Sxx
-        # Szy=Sxx
         # print "xshape : ", x.shape
         # print "Sxx shape : ", Sxx.shape
         xtemp=np.arange(0,step-1)
@@ -348,7 +347,7 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
         # print "xtempshape: ", xtemp.shape
         A = np.vstack([xtemp,xtemp_ones]).T
         # print "A shape: ", A.shape, x[0:0+step-1].shape
-        inner_end_step = sample_rate*duration - step
+        inner_end_step = sample_rate*new_duration - step
         # print "inner_end_step ", inner_end_step
         # print "step ", step
         for i in np.arange(0,inner_end_step - 1,step):
@@ -419,11 +418,11 @@ def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
         # NS33 = S33 / S33.max()
         # print count
         # print "finalshape: ", final.shape, NS12[0].shape, final[count].shape, count
-        final[count] = NS12[0]
-        count += 1
+        final.append(NS12[0]) # [count] = NS12[0]
+        # count += 1
         
     # print "finalshape: ", final.shape
-    final = np.mean(final, axis=0)
+    # final = np.mean(final, axis=0)
     # print "finalshape: ", final.shape
 
     return f,final
