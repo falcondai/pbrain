@@ -225,83 +225,127 @@ def start_ddtf():
     # d.win.show()
 
 
-def do_ddtf(el1,el2,sample_rate=500,step=128):
+def test_do():
+    e1,e2,e3 = signal_gen.signal_gen(3,.1,.001)
+    do_ddtf_loop(e1,e2)
 
-    # notes: duration is the length of a window in seconds
+def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
+    
+    # notes: duration is the length of a window in seconds - note that this is a moving window
     # increment is the length of a step in seconds
+    step = 32
+    # should step just default to 64 or should it be increment in points??
     # step is the num points in an fft-analysis epoch
     N = len(el1)
     dt = 1/float(sample_rate)
     fNyq = sample_rate/2
     df = 1/(step*dt)
     f = np.arange(0,fNyq,df) #Frequency axis for the FFT
+    # print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
 
-    count = 0
-    # end_step = N - duration*sample_rate
-    # NOTE: incrementing by slices now handled by parent function
+    steps = np.arange(0,end_step,increment*sample_rate)
+    total_steps = len(steps)
+    # print "STEPS: ", steps, total_steps
+    # print "end_step ", end_step
+    # print "stepping by ", increment * sample_rate
     # for w in np.arange(0,end_step, increment * sample_rate):
-    x=el1 #[w:w+duration*sample_rate] # should this be - 1 or 2?
-    y=el2 #[w:w+duration*sample_rate]
+    x=el1 #[w:w+new_duration*sample_rate] # should this be - 1 or 2?
+    y=el2 #[w:w+new_duration*sample_rate]
+    # z=el3[w:w+duration*sample_rate]
     # Initialize the Cross-Spectral arrays for averaging
-    print "step first is : ", step
-    Sxx=np.zeros((1,N)); # - 1 here?
-    print "Sxx: " , Sxx.shape
+    # print "step first is : ", step
+    Sxx=np.zeros((1,step - 1)); # - 1 here?
+    # print "Sxx: " , Sxx.shape
     Syy=Sxx
-
+    # Szz=Sxx
     Sxy=Sxx
-
-    print "xshape : ", x.shape
-    print "Sxx shape : ", Sxx.shape
-    xtemp=np.arange(0,N)
+    # print "xshape : ", x.shape
+    # print "Sxx shape : ", Sxx.shape
+    xtemp=np.arange(0,step-1)
     xtemp_ones = np.ones(len(xtemp))
-    print "xtempshape: ", xtemp.shape
+    # print "xtempshape: ", xtemp.shape
     A = np.vstack([xtemp,xtemp_ones]).T
-    print "A shape: ", A.shape
-    # inner_end_step = sample_rate*duration - step
-    # for i in np.arange(0,inner_end_step - 1,step):
-    m,b = np.linalg.lstsq(A,x)[0] # the minus 1?
-    print "XXXXX m, b: ", m, b
-    trend = m*xtemp + b
-    # print "istep : ", (i+step-1)
-    # x[i:i+step-1] = x[i:i+step-1] - trend # detrend
-    # x[i:i+step-1] = x[i:i+step-1] - np.mean(x[i:i+step-1]) # demean
-    x = x - trend
-    x = x - np.mean(x)
-    # fx = np.fft.fft(x[i:i+step-1] * np.hanning(step-1).T) # windowed fft
-    fx = np.fft.fft(x * np.hanning(N).T)
+    # print "A shape: ", A.shape, x[0:0+step-1].shape
+    inner_end_step = sample_rate*duration - step
+    # print "inner_end_step ", inner_end_step
+    # print "step ", step
+    for i in np.arange(0,inner_end_step - 1,min(step,int(duration/4))):
+        # print "X SHAPE ", x[i:i+step-1].shape, i
+        m,b = np.linalg.lstsq(A,x[i:i+step-1])[0] # the minus 1?
+        # print "m, b: ", m, b
+        trend = m*xtemp + b
+        # print "istep : ", (i+step-1)
+        x[i:i+step-1] = x[i:i+step-1] - trend # detrend
+        x[i:i+step-1] = x[i:i+step-1] - np.mean(x[i:i+step-1]) # demean
+        fx = np.fft.fft(x[i:i+step-1] * np.hanning(step-1).T) # windowed fft
 
-    m,b = np.linalg.lstsq(A,y)[0] # the minus 1?
-    print "YYYYY m, b: ", m, b
-    trend = m*xtemp + b
-    y = y - trend
-    y = y - np.mean(y)
-    # fx = np.fft.fft(x[i:i+step-1] * np.hanning(step-1).T) # windowed fft
-    fy = np.fft.fft(y * np.hanning(N).T)
+        m,b = np.linalg.lstsq(A,y[i:i+step-1])[0] # the minus 1?
+        trend = m*xtemp + b
+        y[i:i+step-1] = y[i:i+step-1] - trend # detrend
+        y[i:i+step-1] = y[i:i+step-1] - np.mean(y[i:i+step-1]) # demean
+        fy = np.fft.fft(y[i:i+step-1] * np.hanning(step-1).T) # windowed fft
 
-    Sxx=Sxx+(fx * fx.conj())
-    Syy=Syy+(fy * fy.conj())
-    Sxy=Sxy+(fx * fy.conj())
+        # m,b = np.linalg.lstsq(A,z[i:i+step-1])[0] # the minus 1?
+        # trend = m*xtemp + b
+        # z[i:i+step-1] = z[i:i+step-1] - trend # detrend
+        # z[i:i+step-1] = z[i:i+step-1] - np.mean(z[i:i+step-1]) # demean
+        # fz = np.fft.fft(z[i:i+step-1] * np.hanning(step-1).T) # windowed fft
 
-    Syx = Sxy.conj()
+        # print "fs are ", fx, fy, fz
+        # print "fxconf ", fx.conj()
+        # print "Sxx ", Sxx.shape, Sxx.shape
+        # print "fxstuff ", ((fx * fx.conj())).shape
+
+        Sxx=Sxx+(fx * fx.conj())
+        # print "Sxx2 ", Sxx.shape
+        Syy=Syy+(fy * fy.conj())
+        # Szz=Szz+(fz * fz.conj())
+        Sxy=Sxy+(fx * fy.conj())
+        # Sxz=Sxz+(fx * fz.conj())
+        # Syz=Syz+(fy * fz.conj())
+
+        # print "Sxx shape: ", Sxx.shape
+        # print "Sxy shape: ", Sxy.shape
+        # print "Szy shape: ", Sxx.shape
+        # print "Syz shape: ", Syz.shape
+
+        Syx = Sxy.conj()
+        # Szx = Sxz.conj()
+        # Szy = Syz.conj()
 
     S11=abs(Sxx)**2
     S12=abs(Sxy)**2
+    # S13=abs(Sxz)**2
     S21=abs(Syx)**2
     S22=abs(Syy)**2
+    # S23=abs(Syz)**2
+    # S31=abs(Szx)**2
+    # S32=abs(Szy)**2
+    # S33=abs(Szz)**2
 
-    sumS = S11 + S12
-    sumS2 = S21 + S22
-
+    sumS = S11 + S12 #  + S13
+    sumS2 = S21 + S22 #  + S23
+    # sumS3 = S31 + S32 + S33
+    # NS11 = S11 / S11.max()
     NS12 = S12 / sumS
+    # NS13 = S13 / sumS
     NS21 = S21 / sumS2
+    # NS22 = S22 / S22.max()
+    # NS23 = S23 / sumS2
+    # NS31 = S31 / sumS3
+    # NS32 = S32 / sumS3
+    # NS33 = S33 / S33.max()
+    # print count
+    # print "finalshape: ", final.shape, NS12[0].shape, final[count].shape, count
+    # count += 1
+        
+    # print "finalshape: ", final.shape
+    # final = np.mean(final, axis=0)
+    # print "finalshape: ", final.shape
 
-    count += 1
+    return f,final
 
-    return f,NS12[0], NS21[0]
 
-def test_do():
-    e1,e2,e3 = signal_gen.signal_gen(3,.1,.001)
-    do_ddtf_loop(e1,e2)
 
 def do_ddtf_loop(el1,el2,sample_rate=500,duration=20):
     
