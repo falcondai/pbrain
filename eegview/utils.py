@@ -366,7 +366,7 @@ def cohere_bands(cxy, phase, freqs, keys,
     # wise as a matrix to conserve memory.  dimensions of matrix are
     # len(ij)*len(freqs), which for NFFT=2048 and 64 electrodes
     # pairwise is 2016*2048 coherences and phases.  8 million floats.
-    
+    granger = False #temporary!!
     Nbands = len(bands)
     count = 0
     Nkeys = len(keys)
@@ -827,7 +827,7 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
     if granger_on:
-        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,maxlag=maxlag, gv1=gv1, gv2=gv2)
+        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=donothing_callback)
     else:
         if returnPxx:
             try:

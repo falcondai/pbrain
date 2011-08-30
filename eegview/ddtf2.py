@@ -242,9 +242,6 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     df = 1/(step*dt)
     f = np.arange(0,fNyq,df) #Frequency axis for the FFT
     # print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
-
-    steps = np.arange(0,end_step,increment*sample_rate)
-    total_steps = len(steps)
     # print "STEPS: ", steps, total_steps
     # print "end_step ", end_step
     # print "stepping by ", increment * sample_rate
@@ -254,14 +251,14 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     # z=el3[w:w+duration*sample_rate]
     # Initialize the Cross-Spectral arrays for averaging
     # print "step first is : ", step
-    Sxx=np.zeros((1,step - 1)); # - 1 here?
+    Sxx=np.zeros((1,step)); # - 1 here?
     # print "Sxx: " , Sxx.shape
     Syy=Sxx
     # Szz=Sxx
     Sxy=Sxx
     # print "xshape : ", x.shape
     # print "Sxx shape : ", Sxx.shape
-    xtemp=np.arange(0,step-1)
+    xtemp=np.arange(0,step)
     xtemp_ones = np.ones(len(xtemp))
     # print "xtempshape: ", xtemp.shape
     A = np.vstack([xtemp,xtemp_ones]).T
@@ -269,21 +266,24 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     inner_end_step = sample_rate*duration - step
     # print "inner_end_step ", inner_end_step
     # print "step ", step
-    for i in np.arange(0,inner_end_step - 1,min(step,int(duration/4))):
+    print "LENX: ", len(x)
+    print "INNER END STEP: ", inner_end_step
+    print "INDS: ", np.append(np.arange(0,inner_end_step,4),inner_end_step)
+    for i in np.append(np.arange(0,inner_end_step,4),inner_end_step):
         # print "X SHAPE ", x[i:i+step-1].shape, i
-        m,b = np.linalg.lstsq(A,x[i:i+step-1])[0] # the minus 1?
+        m,b = np.linalg.lstsq(A,x[i:i+step])[0] # the minus 1?
         # print "m, b: ", m, b
         trend = m*xtemp + b
         # print "istep : ", (i+step-1)
-        x[i:i+step-1] = x[i:i+step-1] - trend # detrend
-        x[i:i+step-1] = x[i:i+step-1] - np.mean(x[i:i+step-1]) # demean
-        fx = np.fft.fft(x[i:i+step-1] * np.hanning(step-1).T) # windowed fft
+        x[i:i+step] = x[i:i+step] - trend # detrend
+        x[i:i+step] = x[i:i+step] - np.mean(x[i:i+step]) # demean
+        fx = np.fft.fft(x[i:i+step] * np.hanning(step).T) # windowed fft
 
-        m,b = np.linalg.lstsq(A,y[i:i+step-1])[0] # the minus 1?
+        m,b = np.linalg.lstsq(A,y[i:i+step])[0] # the minus 1?
         trend = m*xtemp + b
-        y[i:i+step-1] = y[i:i+step-1] - trend # detrend
-        y[i:i+step-1] = y[i:i+step-1] - np.mean(y[i:i+step-1]) # demean
-        fy = np.fft.fft(y[i:i+step-1] * np.hanning(step-1).T) # windowed fft
+        y[i:i+step] = y[i:i+step] - trend # detrend
+        y[i:i+step] = y[i:i+step] - np.mean(y[i:i+step]) # demean
+        fy = np.fft.fft(y[i:i+step] * np.hanning(step).T) # windowed fft
 
         # m,b = np.linalg.lstsq(A,z[i:i+step-1])[0] # the minus 1?
         # trend = m*xtemp + b
@@ -343,7 +343,7 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     # final = np.mean(final, axis=0)
     # print "finalshape: ", final.shape
 
-    return f,final
+    return f,NS12
 
 
 

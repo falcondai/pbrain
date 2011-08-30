@@ -180,7 +180,7 @@ def old_granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, p
     return Cxy, Phase, freqs
 
 
-def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none):
+def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=donothing_callback, noverlap=0,window=window_hanning,detrend = detrend_none):
     # note that Fs is the frequency of the eeg spectrum, and should never actually be 2
     threshold = .05/(len(ij)*2)
     oldNFFT = NFFT
@@ -245,9 +245,10 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
         if count%10==0:
             progressCallback(count/N, 'Computing coherences')
         
-        f, final = ddtf2.do_ddtf_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
-        # Cxy[i,j] = result # max((result, rev_result))
-        # Phase[i,j] = result
+        f, final = ddtf2.do_ddtf_single_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
+        Cxy[i,j] = final # max((result, rev_result))
+        Phase[i,j] = final
+        """
         counter = 0
         for entry in final:
             try:
@@ -258,12 +259,12 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
             counter += 1
 
         print "FREQUENCIES!!! ", f
-    
+        """
                 
     print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
     freqs = f # Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
-    return All_final, freqs
+    return Cxy, Phase, freqs
 
 
 
