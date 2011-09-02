@@ -327,7 +327,7 @@ def cohere_array_to_dict(a, keys):
 
 
 def cohere_bands(cxy, phase, freqs, keys,
-                 bands = ( (1,4), (4,8), (8,12), (12,30), (30,55) ), granger=False,
+                 bands = ( (1,4), (4,8), (8,12), (12,30), (30,55) ), calc_type='coherence',
                  progressCallback=donothing_callback):
 
     """
@@ -366,7 +366,7 @@ def cohere_bands(cxy, phase, freqs, keys,
     # wise as a matrix to conserve memory.  dimensions of matrix are
     # len(ij)*len(freqs), which for NFFT=2048 and 64 electrodes
     # pairwise is 2016*2048 coherences and phases.  8 million floats.
-    granger = False #temporary!!
+
     Nbands = len(bands)
     count = 0
     Nkeys = len(keys)
@@ -378,7 +378,7 @@ def cohere_bands(cxy, phase, freqs, keys,
         thisCxy = cxy[key]
 
         thisPhase = phase[key]
-        if not granger:
+        if calc_type in ['coherence','ddtf']:
             ac = zeros( (Nbands,), thisCxy.dtype)
             ap = zeros( (Nbands,), thisPhase.dtype)
         else:
@@ -387,7 +387,7 @@ def cohere_bands(cxy, phase, freqs, keys,
         count = 0
         for inds, inde in ind:
             if inds==inde:
-                if not granger:
+                if calc_type in ['coherence','ddtf']:
                     ac[count]=thisCxy[inds]
                     ap[count]=thisPhase[inds]
                 else:
@@ -395,7 +395,7 @@ def cohere_bands(cxy, phase, freqs, keys,
                     ap[count]=thisPhase
                     
             else:
-                if not granger:
+                if calc_type in ['coherence','ddtf']:
                     ac[count] = mean(thisCxy[inds:inde])
                     ap[count] = mean(thisPhase[inds:inde])
                 else:
@@ -742,7 +742,7 @@ def get_best_exp_params(x, y, guess=(1.0, -.5, 0.0)):
 
 
 def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, indMax=None,
-                      data=None, returnPxx=False, granger_on = False, maxlag=3, gv1 = 0, gv2 = 0,eegfreq=500, **kwargs):
+                      data=None, returnPxx=False, calc_type='coherence', eegfreq=500, **kwargs):
     """
     FUNC: cohere_pairs_eeg
     DESCR: Cxy, Phase, freqs = cohere_pairs_eeg(  ...)
@@ -826,7 +826,7 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     All = {}
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
-    if granger_on:
+    if calc_type == 'ddtf':
         Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=donothing_callback)
     else:
         if returnPxx:
@@ -857,23 +857,6 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
         seen[i] = e1
         seen[j] = e2
 
-    """
-    # the ddtf key manipulation
-    All_new_cxy = []
-    All_new_phase = []
-    if All != {}:
-        for Cxy in All.values():
-            keys = Cxy.keys()
-            keys.sort()
-            assert(len(ij)==len(eoiPairs))
-            for keyIJ, keyEOI in zip(ij, eoiPairs):
-                Cxy[keyEOI] = Cxy[keyIJ]
-                del Cxy[keyIJ]
-                # Phase[keyEOI] = Phase[keyIJ]
-                # del Phase[keyIJ]
-            All_new_cxy.append(Cxy)
-    """
-                
     if returnPxx:
         for i, ei in seen.items():
             Pxx[ei] = Pxx[i]

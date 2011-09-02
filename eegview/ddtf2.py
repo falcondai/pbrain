@@ -242,15 +242,9 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     df = 1/(step*dt)
     f = np.arange(0,fNyq,df) #Frequency axis for the FFT
     # print "duration, sample_rate, step, increment ", duration, sample_rate,step,increment
-    # print "STEPS: ", steps, total_steps
-    # print "end_step ", end_step
-    # print "stepping by ", increment * sample_rate
-    # for w in np.arange(0,end_step, increment * sample_rate):
     x=el1 #[w:w+new_duration*sample_rate] # should this be - 1 or 2?
     y=el2 #[w:w+new_duration*sample_rate]
-    # z=el3[w:w+duration*sample_rate]
     # Initialize the Cross-Spectral arrays for averaging
-    # print "step first is : ", step
     Sxx=np.zeros((1,step)); # - 1 here?
     # print "Sxx: " , Sxx.shape
     Syy=Sxx
@@ -264,11 +258,7 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     A = np.vstack([xtemp,xtemp_ones]).T
     # print "A shape: ", A.shape, x[0:0+step-1].shape
     inner_end_step = sample_rate*duration - step
-    # print "inner_end_step ", inner_end_step
-    # print "step ", step
-    print "LENX: ", len(x)
-    print "INNER END STEP: ", inner_end_step
-    print "INDS: ", np.append(np.arange(0,inner_end_step,4),inner_end_step)
+    # print "INDS: ", np.append(np.arange(0,inner_end_step,4),inner_end_step)
     for i in np.append(np.arange(0,inner_end_step,4),inner_end_step):
         # print "X SHAPE ", x[i:i+step-1].shape, i
         m,b = np.linalg.lstsq(A,x[i:i+step])[0] # the minus 1?
@@ -285,65 +275,23 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
         y[i:i+step] = y[i:i+step] - np.mean(y[i:i+step]) # demean
         fy = np.fft.fft(y[i:i+step] * np.hanning(step).T) # windowed fft
 
-        # m,b = np.linalg.lstsq(A,z[i:i+step-1])[0] # the minus 1?
-        # trend = m*xtemp + b
-        # z[i:i+step-1] = z[i:i+step-1] - trend # detrend
-        # z[i:i+step-1] = z[i:i+step-1] - np.mean(z[i:i+step-1]) # demean
-        # fz = np.fft.fft(z[i:i+step-1] * np.hanning(step-1).T) # windowed fft
-
-        # print "fs are ", fx, fy, fz
-        # print "fxconf ", fx.conj()
-        # print "Sxx ", Sxx.shape, Sxx.shape
-        # print "fxstuff ", ((fx * fx.conj())).shape
-
         Sxx=Sxx+(fx * fx.conj())
-        # print "Sxx2 ", Sxx.shape
         Syy=Syy+(fy * fy.conj())
-        # Szz=Szz+(fz * fz.conj())
         Sxy=Sxy+(fx * fy.conj())
-        # Sxz=Sxz+(fx * fz.conj())
-        # Syz=Syz+(fy * fz.conj())
-
-        # print "Sxx shape: ", Sxx.shape
-        # print "Sxy shape: ", Sxy.shape
-        # print "Szy shape: ", Sxx.shape
-        # print "Syz shape: ", Syz.shape
-
         Syx = Sxy.conj()
-        # Szx = Sxz.conj()
-        # Szy = Syz.conj()
 
     S11=abs(Sxx)**2
     S12=abs(Sxy)**2
-    # S13=abs(Sxz)**2
     S21=abs(Syx)**2
     S22=abs(Syy)**2
-    # S23=abs(Syz)**2
-    # S31=abs(Szx)**2
-    # S32=abs(Szy)**2
-    # S33=abs(Szz)**2
 
     sumS = S11 + S12 #  + S13
     sumS2 = S21 + S22 #  + S23
-    # sumS3 = S31 + S32 + S33
-    # NS11 = S11 / S11.max()
-    NS12 = S12 / sumS
-    # NS13 = S13 / sumS
-    NS21 = S21 / sumS2
-    # NS22 = S22 / S22.max()
-    # NS23 = S23 / sumS2
-    # NS31 = S31 / sumS3
-    # NS32 = S32 / sumS3
-    # NS33 = S33 / S33.max()
-    # print count
-    # print "finalshape: ", final.shape, NS12[0].shape, final[count].shape, count
-    # count += 1
-        
-    # print "finalshape: ", final.shape
-    # final = np.mean(final, axis=0)
-    # print "finalshape: ", final.shape
 
-    return f,NS12
+    NS12 = S12 / sumS
+    NS21 = S21 / sumS2 # possibly do something with this?
+
+    return f,NS12[0]
 
 
 

@@ -169,7 +169,8 @@ class View3(gtk.Window, Observer):
         self.NFFT = 512. #sweeplength
         self.newLength = 256. #windowlength
         self.offset = 0.
-	self.granger = False
+	self.calc_type = 'coherence'
+	
 	self.maxlag = 3
 	self.gv1 = 0
 	self.gv2 = 0
@@ -413,24 +414,15 @@ class View3(gtk.Window, Observer):
         self.add_toolbutton1(toolbar1, gtk.STOCK_QUIT, 'Close view 3D', 'Private', close)
         self.add_separator(toolbar1)
         
-
-        
-        def coh_explore(button, *args):
+	def coh_explore(button, *args):
             ce = CohExplorer(self.eoi, self.eeg.freq)
             ce.show()
-        
-        
-            
-        self.buttonRange = gtk.CheckButton()
+                
+	self.buttonRange = gtk.CheckButton()
         self.buttonRange.set_active(False)
 
-        self.buttonGranger = gtk.CheckButton()
-        self.buttonGranger.set_active(False)
-        
-        #self.buttonRange.set_mode(True)
         self.buttonPxx = gtk.CheckButton()
         self.buttonPxx.set_active(False)
-        #self.buttonPxx.set_mode(True)
         self.ltimerange = gtk.Label("Data Time Range:")
         self.etimemin = gtk.Entry()
         self.etimemax = gtk.Entry()
@@ -454,7 +446,7 @@ class View3(gtk.Window, Observer):
             dlg2 = gtk.Dialog("Coherence Calculation Parameters")
             dlg2.connect("destroy", dlg2.destroy)
             dlg2.set_size_request(450,550)
-            table2 = gtk.Table(3,9)
+            table2 = gtk.Table(3,7)
             table2.show()
             table2.set_row_spacings(4)
             table2.set_col_spacings(4)
@@ -468,13 +460,8 @@ class View3(gtk.Window, Observer):
             lcoh.show()
             loff = gtk.Label("Offset in ms:")
             loff.show()
-	    lgranger = gtk.Label("true = granger, false = coh")
-	    lgranger.show()
-	    lmaxlag = gtk.Label("maxlag for granger:")
-	    lmaxlag.show()
-	    lgv = gtk.Label("type and version for granger")
-	    lgv.show()
-            lhelp = gtk.Label("Note: coherence is indexed by sweep length into datarange. if coh window size < sweep length, some data will be skipped over. set datarange manually for individual runs of trial, or choose all data for all trial runs. FOR GRANGER: params - first value 0-1, second 0-1 - first chooses: ['params_ftest' or 'ssr_chi2test'], second chooses teststatistic or pvalue. Note that pvalue is in phase or vice versa.") 
+	    	    
+            lhelp = gtk.Label("Note: coherence is indexed by sweep length into datarange. if coh window size < sweep length, some data will be skipped over. set datarange manually for individual runs of trial, or choose all data for all trial runs.") 
             lhelp.set_line_wrap(True)
             lhelp.show()
             esweep = gtk.Entry()
@@ -492,26 +479,10 @@ class View3(gtk.Window, Observer):
             eoff.set_text("%d" % ((self.offset/eegfreq)*1000))
             eoff.connect('changed', self.numbify)
             eoff.show()
-	    emaxlag = gtk.Entry()
-	    emaxlag.set_width_chars(1)
-            emaxlag.set_text(str(self.maxlag))
-            emaxlag.connect('changed', self.numbify)
-            emaxlag.show()
-	    egv1 = gtk.Entry()
-	    egv1.set_width_chars(1)
-            egv1.set_text(str(self.gv1))
-            egv1.connect('changed', self.numbify)
-            egv1.show()
-	    egv2 = gtk.Entry()
-	    egv2.set_width_chars(1)
-            egv2.set_text(str(self.gv2))
-            egv2.connect('changed', self.numbify)
-            egv2.show()
 	    
             self.buttonRange.show()
             self.buttonPxx.show()
-	    self.buttonGranger.show()
-            self.ltimerange.show()
+	    self.ltimerange.show()
             self.etimemin.set_width_chars(3)
             self.etimemax.set_width_chars(3)
             self.etimemin.connect('changed', self.numbify)
@@ -520,7 +491,6 @@ class View3(gtk.Window, Observer):
             self.etimemax.set_text("%d" % ((self.NFFT/eegfreq)*1000))
             self.etimemin.show()
             self.etimemax.show()
-            
             
             table2.attach(lpxx,0,1,0,1)
             table2.attach(self.buttonPxx,1,2,0,1)
@@ -532,16 +502,9 @@ class View3(gtk.Window, Observer):
             table2.attach(lsweep,0,1,3,4)
             table2.attach(lcoh,0,1,4,5)
             table2.attach(loff,0,1,5,6)
-	    table2.attach(lgranger,0,1,6,7)
-            table2.attach(lmaxlag,0,1,7,8)
-	    table2.attach(lgv,0,1,8,9)
 	    table2.attach(esweep,1,2,3,4)
             table2.attach(ecoh,1,2,4,5)
             table2.attach(eoff,1,2,5,6)
-	    table2.attach(self.buttonGranger,1,2,6,7)
-	    table2.attach(emaxlag,1,2,7,8)
-	    table2.attach(egv1,1,2,8,9)
-	    table2.attach(egv2,2,3,8,9)
 
             dlg2.vbox.pack_start(table2, True, True)
             dlg2.vbox.pack_start(lhelp, True, False)
@@ -558,13 +521,6 @@ class View3(gtk.Window, Observer):
                     self.NFFT = ms2points(int(esweep.get_text()),eegfreq)
                     self.offset = ms2points(int(eoff.get_text()),eegfreq)
                     self.newLength = ms2points(int(ecoh.get_text()),eegfreq)
-		    self.maxlag = int(emaxlag.get_text())
-		    self.gv1 = int(egv1.get_text())
-		    self.gv2 = int(egv2.get_text()) 
-		    if self.buttonGranger.get_active():
-			self.granger = True
-		    else:
-			self.granger = False
                     if self.buttonRange.get_active():
                         range_toggled()
                     else:
@@ -637,7 +593,6 @@ class View3(gtk.Window, Observer):
         #toolbar2.append_widget(bandMenu, 'The frequency band', '')
         self.add_toolitem2(toolbar2, bandMenu, 'The frequency band')
 
-
         def get_thresh_value(combobox):
             model = combobox.get_model()
             index = combobox.get_active()
@@ -694,7 +649,13 @@ class View3(gtk.Window, Observer):
         #toolbar2.append_widget(threshMenu, 'The threshold type', '')
         self.add_toolitem2(toolbar2, threshMenu, 'The threshold type')
 
-
+	def set_calctype(combobox):
+            model = combobox.get_model()
+            index = combobox.get_active()
+            self.calc_type = model[index][0]
+	calc_options = make_option_menu(['coherence', 'granger', 'ddtf', 'correlation'], set_calctype)
+	self.add_toolitem2(toolbar2, calc_options, 'Calc options')
+	
         def low_clicked(button):
             self._low = button.get_active()
             
@@ -713,7 +674,6 @@ class View3(gtk.Window, Observer):
         #toolbar2.append_widget(self.entryMaxDist, 'Maximum distace', '')
         #self.add_toolitem2(toolbar2, self.entryMaxDist, 'Maximum distance')
         self.add_toolbutton1(toolbar2, gtk.STOCK_EXECUTE, 'Compute Coherence', 'Private', compute_and_plot)
-	self.add_toolbutton1(toolbar2, gtk.STOCK_EXECUTE, 'Compute DDTF', 'Private', self.compute_ddtf)
         self.add_toolbutton1(toolbar2, gtk.STOCK_EXECUTE, 'Replot', 'Private', self.plot_band)
         
         self.add_separator(toolbar2)
@@ -1587,99 +1547,11 @@ class View3(gtk.Window, Observer):
             destroy = args[2]
             self.overlay_array(finishedFigure, init, destroy)
             
-    def compute_ddtf(self, setTime=None, *args):
-        tmin, tmax = self.eegplot.get_time_lim()
-        print "VIEW3.compute_coherence offset: ", self.offset
-        #set up the time display - only works for new coh calc functions?
-        self.timedisplay.SetText(0, "t = %3.2f" %((self.offset/self.eeg.freq) + (self.xmin/1000)))
-	eeg = self.eegplot.get_eeg()
-	
-        t, data = self.eeg.get_data(tmin, tmax)
-        if self.filterGM:            
-            data = filter_grand_mean(data)
-	def progress_callback(frac,  msg):
-            if frac<0 or frac>1: return
-	    self.progBar.set_fraction(frac)
-            while gtk.events_pending(): gtk.main_iteration()
-      
-	Cxyband_array = self.ddtf_pairs_eeg(
-                eeg,
-                self.newLength,
-                self.NFFT,
-                self.offset,
-                self.eoiPairs,
-                data = data,
-                detrend = detrend_none,
-                window = window_none,
-                noverlap = 0,
-                preferSpeedOverMemory = 1,
-                progressCallback = progress_callback,
-		)
-
-
-    def ddtf_pairs_eeg(self, eeg, newLength, NFFT, offset, eoiPairs=None, window=None, noverlap = 0, indMin=0, indMax=None, data=None, progressCallback=None, **kwargs):
-        tmin, tmax = self.eegplot.get_time_lim()
-        amp = eeg.get_amp()
-        #print "UTILS AMP: ", amp
-	if eoiPairs is None:
-            eoiPairs = all_pairs_eoi( amp.to_eoi() )
-
-	offset = int(offset)
-	print "COHERE_PAIRS_EEG: int offset: ", offset 
-
-	m = amp.get_electrode_to_indices_dict()
-	ij = [ (m[e1], m[e2]) for e1, e2 in eoiPairs]
-	ij.sort()
-
-	print "COHERE_PAIRS EEG PAIRS LENGTH: ", len(ij), len(eoiPairs)
-
-	if data is None: data = eeg.data
-	if indMax is None: indMax = data.shape[0]
-	X = data[indMin:indMax]
-	All, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=progressCallback)
-	# the ddtf key manipulation
-	All_new_cxy = {}
-	if All != {}:
-	    for Cxykey in All: # get the number result
-		Cxy = All[Cxykey] # get the indiv pairdict of ddtf magnitudes
-		keys = Cxy.keys()
-		keys.sort() # this is the reverse of the sort above on ij
-		assert(len(ij)==len(eoiPairs))
-		for keyIJ, keyEOI in zip(ij, eoiPairs):
-		    Cxy[keyEOI] = Cxy[keyIJ]
-		    del Cxy[keyIJ]
-		    # Phase[keyEOI] = Phase[keyIJ]
-		    # del Phase[keyIJ]
-		All_new_cxy[Cxykey] = Cxy
-
-	# All_new_cxy is a dict of observation # => dict of pair => magnitude
-	# now we'll loop over the results and broadcast each one
-	bands = ( (1,4), (4,8), (8,12), (12,30), (30,50), (70,100) )
-	total = len(All_new_cxy.keys())
-	divided_offset = self.newLength / total
-	for Cxykey in All_new_cxy:
-	    Cxy = All_new_cxy[Cxykey]
-	    cxyBands, phaseBands = cohere_bands(
-		Cxy, Cxy, freqs, self.eoiPairs, bands, granger=False)
-	    self.cohereResults = freqs,cxyBands,cxyBands
-	    self.broadcast(Observer.COMPUTE_COHERENCE,
-		       (tmin, tmax),
-		       self.eoiPairs,
-		       self.cohereResults,
-		       None)
-	    if self.buttonDump.get_active():
-                if (self.cohFile != None):
-                    self.print_coh()
-	    self.plot_band()
-	    self.offset += divided_offset
-
-
 
     #COMPUTE COHERENCE: CALLED BY RECIEVE: SET_TIME_LIM
     #args are min and max time
     def compute_coherence(self, setTime=None, *args):
-	granger = self.granger    
-	maxlag = self.maxlag
+	calc_type = self.calc_type
         #code for view3 progressbar on the right
         if sys.platform == 'darwin':
             def progress_callback(frac,  msg):
@@ -1724,8 +1596,6 @@ class View3(gtk.Window, Observer):
         if self.filterGM:            
             data = filter_grand_mean(data)
             
-        
-
         print "View3.compute_coherence(): NFFT, dt: ", self.NFFT, " , ", dt
         #print "View3.compute_coherence(): self.eoiPairs = ", self.eoiPairs
         bands = ( (1,4), (4,8), (8,12), (12,30), (30,50), (70,100) )
@@ -1745,10 +1615,7 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=True,
-		granger_on = granger,
-		maxlag = maxlag,
-		gv1 = self.gv1,
-		gv2 = self.gv2
+		calc_type = calc_type
             )
             pxxBand = power_bands(Pxx, freqs, bands)
             self.pxxResults = pxxBand
@@ -1766,36 +1633,11 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=False,
-		granger_on = granger,
-		maxlag = maxlag,
-		gv1 = self.gv1,
-		gv2 = self.gv2
+		calc_type = calc_type
             )
             self.pxxResults = None
-        """
-	print "RETRIEVED ALL DATA! ", len(All)
-	counter = 0
-	if All != {} and All != []:
-            for entry in All:
-                # print "ENTRY!", entry
-                # print "ENTRYSHAPE: ", entry.shape
-                # print entry.keys()
-	        cxyBands, phaseBands = cohere_bands(
-            entry, entry, freqs, self.eoiPairs, bands, granger,
-            progressCallback=progress_callback
-            )
-		self.cohereResults  = freqs, cxyBands, phaseBands
-
-                if self.buttonDump.get_active():
-                   if (self.cohFile != None):
-                       num = (counter / len(All)) * self.NFFT
-		       print "index is now: ", num
-                       self.print_coh(num=num)
-		counter += 1
-        else:
-	"""
 	cxyBands, phaseBands = cohere_bands(
-		Cxy, Phase, freqs, self.eoiPairs, bands, granger,
+		Cxy, Phase, freqs, self.eoiPairs, bands, calc_type,
 		progressCallback=progress_callback
 		)
 	self.cohereResults  = freqs, cxyBands, phaseBands
