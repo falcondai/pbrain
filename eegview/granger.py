@@ -180,7 +180,7 @@ def old_granger_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, p
     return Cxy, Phase, freqs
 
 
-def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=donothing_callback, noverlap=0,window=window_hanning,detrend = detrend_none):
+def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=donothing_callback, noverlap=0,window=window_hanning,detrend = detrend_none, calc_type='ddtf',shape=None):
     # note that Fs is the frequency of the eeg spectrum, and should never actually be 2
     threshold = .05/(len(ij)*2)
     oldNFFT = NFFT
@@ -245,29 +245,32 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
         if count%10==0:
             progressCallback(count/N, 'Computing coherences')
         
-        f, final = ddtf2.do_ddtf_single_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
+        if calc_type == 'ddtf':
+            f, final = ddtf2.do_ddtf_single_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
+        elif calc_type == 'correlation':
+            if shape == None:
+                shape = make_wave(newLength,Fs)
+                assert(len(shape) == newLength)
+            final = np.correlate(Pxx[i],shape)
+            f = Fs/NFFT*np.arange(numFreqs)
         Cxy[i,j] = final # max((result, rev_result))
         Phase[i,j] = final
-        """
-        counter = 0
-        for entry in final:
-            try:
-                All_final[counter][i,j] = entry
-            except:
-                All_final[counter] = {}
-                All_final[counter][i,j] = entry
-            counter += 1
-
-        print "FREQUENCIES!!! ", f
-        """
-                
-    print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
+        print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
     freqs = f # Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
     return Cxy, Phase, freqs
 
 
 
+def make_wave(newLength,eegfreq):
+    srate = eegfreq
+    newLength_t = newLength * 1.0/eegfreq
+    # want the freq of the wave to be 4 per length in points
+    t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
+    # print t, np.pi
+    wave = np.cos(2.0*np.pi*(4.0/newLength_t) * t)
+    # print wave
+    return wave
 
 def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
 
@@ -475,8 +478,8 @@ class DDTF():
             c += 1
     
         self.ax1 = self.fig.add_subplot(431, title=ttle1)
-        self.ax1.set_xlim(0,60)
-        self.ax1.set_ylim(0,1)
+        # self.ax1.set_xlim(0,60)
+        # self.ax1.set_ylim(0,1)
 
         self.ax2 = self.fig.add_subplot(432, title=ttle2)
         self.ax2.set_xlim(0,60)
@@ -515,6 +518,22 @@ class DDTF():
         self.ax10 = self.fig.add_subplot(4,3,10, title="el1")
         self.ax11 = self.fig.add_subplot(4,3,11, title="el2")
         self.ax12 = self.fig.add_subplot(4,3,12, title="el3")
+
+
+    def make_wave(self, newLength,eegfreq):
+        srate = eegfreq
+        newLength_t = newLength * 1.0/eegfreq
+        # want the freq of the wave to be 4 per length in points
+        t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
+        print t, np.pi
+        wave = np.cos(2.0*np.pi*(4.0/newLength_t) * t)
+        print wave
+        self.ax1.plot(t,wave)
+        self.ax10.plot(self.e1)
+        self.ax11.plot(self.e2)
+        self.ax12.plot(self.e3)
+        return wave
+
 
     def ddtf(self,el1,el2,el3,sample_rate=400,duration=20,step=128,increment=5):
 
@@ -647,5 +666,6 @@ class DDTF():
 
 def start_ddtf():
     d = DDTF()
-    d.ddtf(d.e1,d.e2,d.e3)
+    d.make_wave(128,500)
+    # d.ddtf(d.e1,d.e2,d.e3)
     d.win.show()

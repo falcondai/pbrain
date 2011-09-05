@@ -742,7 +742,7 @@ def get_best_exp_params(x, y, guess=(1.0, -.5, 0.0)):
 
 
 def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, indMax=None,
-                      data=None, returnPxx=False, calc_type='coherence', eegfreq=500, **kwargs):
+                      data=None, returnPxx=False, calc_type='coherence', shape=None,**kwargs):
     """
     FUNC: cohere_pairs_eeg
     DESCR: Cxy, Phase, freqs = cohere_pairs_eeg(  ...)
@@ -827,7 +827,9 @@ def cohere_pairs_eeg( eeg, newLength, NFFT, offset, eoiPairs=None, indMin=0, ind
     if indMax is None: indMax = data.shape[0]
     X = data[indMin:indMax]
     if calc_type == 'ddtf':
-        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=donothing_callback)
+        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=donothing_callback,calc_type=calc_type,shape=shape)
+    elif calc_type == 'correlation':
+        Cxy, Phase, freqs = granger.ddtf_test(X, ij, newLength, NFFT, offset, Fs=eeg.freq,progressCallback=donothing_callback,calc_type=calc_type,shape=shape)
     else:
         if returnPxx:
             try:

@@ -170,7 +170,7 @@ class View3(gtk.Window, Observer):
         self.newLength = 256. #windowlength
         self.offset = 0.
 	self.calc_type = 'coherence'
-	
+	self.correlation_shape = None
 	self.maxlag = 3
 	self.gv1 = 0
 	self.gv2 = 0
@@ -1615,7 +1615,8 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=True,
-		calc_type = calc_type
+		calc_type = calc_type,
+		shape=self.correlation_shape
             )
             pxxBand = power_bands(Pxx, freqs, bands)
             self.pxxResults = pxxBand
@@ -1633,7 +1634,8 @@ class View3(gtk.Window, Observer):
                 preferSpeedOverMemory = 1,
                 progressCallback = progress_callback,
                 returnPxx=False,
-		calc_type = calc_type
+		calc_type = calc_type,
+		shape=self.correlation_shape
             )
             self.pxxResults = None
 	cxyBands, phaseBands = cohere_bands(
