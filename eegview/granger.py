@@ -215,7 +215,7 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
     else:
         windowVals = window_hanning(np.ones(NFFT, X.dtype)) #I changed this from window to window_hanning. window was not doing anything!! -eli
     if calc_type == "correlation":
-        ind = [0]
+        ind = [offset]
     else:
         ind = range(offset, int(numRows-newLength+1), int(oldNFFT-noverlap)) #coherence calcs on each sweep start at offset
     print "DDTF: IND IS: ", ind
@@ -263,9 +263,10 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
                 Cxy[i,j] = calculated[i]
                 Phase[i,j] = calculated[i]
             else:
-                calculated[i],p = pearsonr(Pxx[i],shape)
-                Cxy[i,j] = calculated[i]
-                Phase[i,j] = calculated[i]
+                final,p = pearsonr(Pxx[i],shape)
+                Cxy[i,j] = final
+                Phase[i,j] = final
+                calculated[i] = final
         # print "FINAL: ", final
         f = Fs/newLength*np.arange(numFreqs)
         
@@ -282,9 +283,9 @@ def make_wave(newLength,eegfreq):
     newLength_t = newLength * 1.0/eegfreq
     # want the freq of the wave to be 4 per length in points
     t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
-    # print t, np.pi
-    wave = np.cos(2.0*np.pi*(4.0/newLength_t) * t)
-    # print wave
+    modifier = 22.0/newLength_t
+    freq_array = np.arange(modifier,modifier/2,-((modifier)/(newLength*2)))
+    wave = np.cos(2.0*np.pi*freq_array*t)
     return wave
 
 def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
@@ -540,8 +541,12 @@ class DDTF():
         newLength_t = newLength * 1.0/eegfreq
         # want the freq of the wave to be 4 per length in points
         t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
-        print t, np.pi
-        wave = np.cos(2.0*np.pi*(4.0/newLength_t) * t)
+        modifier = 15.0/newLength_t
+        freq_array = np.arange(modifier,modifier/2,-((modifier)/(newLength*2)))
+        # if len(freq_array) > len(t):
+            # freq_array=freq_array[0,len(t)]
+        print t, np.pi, freq_array
+        wave = np.cos(2.0*np.pi*freq_array*t)
         print wave
         self.ax1.plot(t,wave)
         self.ax10.plot(self.e1)

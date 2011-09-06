@@ -833,7 +833,7 @@ class View3(gtk.Window, Observer):
                 # return # don't print correlations over trial boundaries
 
         freqs, cxyBands, phaseBands = self.cohereResults
-        
+        # print "PRINT_COH: ", cxyBands
         #print the coherence values to a file if self.cohFile is not None
         if ((self.dumpCsvRadio == 'radio_all') | (self.dumpCsvRadio == 'radio_selected')):
             keys = cxyBands.keys()
