@@ -409,7 +409,7 @@ class CohExplorer(gtk.Window, Observer):
                 tr = copy.deepcopy(tr) #trodes is a dict from name of trode to tuple containing numsamples and sumsamples. copies are important.
                 # um, about the above line - huh?
                 tr = {} #get ready
-                print "tr is empty? ", tr
+                # print "tr is empty? ", tr
                 trodelist.append(tr) #add  tr to the list of data
                 
                 #print "appended new list at index ", i

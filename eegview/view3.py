@@ -827,6 +827,10 @@ class View3(gtk.Window, Observer):
     def print_coh(self,*args):
         try: self.cohereResults
         except AttributeError:  self.compute_coherence()
+	# if self.calc_type == "correlation":
+            # if (self.offset % self.NFFT + self.newLength) > self.NFFT:
+                # print "PRINT_COH: NOT PRINTING"
+                # return # don't print correlations over trial boundaries
 
         freqs, cxyBands, phaseBands = self.cohereResults
         
@@ -874,8 +878,8 @@ class View3(gtk.Window, Observer):
         dumpStrings.sort()
         for s in dumpStrings:
             print>>fh, s
-	print "FOR INSTANCE: ", dumpStrings[0]
-        print "coherence saved to ", self.cohFile
+	# print "FOR INSTANCE: ", dumpStrings[0]
+        # print "coherence saved to ", self.cohFile
 	fh.close()
         
     def voltage_map(self, button, *args):

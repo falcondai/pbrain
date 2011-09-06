@@ -1,5 +1,6 @@
 import numpy as np
 import scikits.statsmodels.tsa.stattools as gtest
+from scipy.stats.stats import pearsonr
 import math
 import matplotlib.cbook as cbook
 import matplotlib
@@ -213,8 +214,11 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
         windowVals = window
     else:
         windowVals = window_hanning(np.ones(NFFT, X.dtype)) #I changed this from window to window_hanning. window was not doing anything!! -eli
-
-    ind = range(offset, int(numRows-newLength+1), int(oldNFFT-noverlap)) #coherence calcs on each sweep start at offset
+    if calc_type == "correlation":
+        ind = [0]
+    else:
+        ind = range(offset, int(numRows-newLength+1), int(oldNFFT-noverlap)) #coherence calcs on each sweep start at offset
+    print "DDTF: IND IS: ", ind
     numSlices = len(ind)
     FFTSlices = {}
     Pxx = {}
@@ -240,22 +244,33 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
     All_final = {}
     All = {}
     iters = 4
-    for i,j in ij:
-        count += 1
-        if count%10==0:
-            progressCallback(count/N, 'Computing coherences')
-        
-        if calc_type == 'ddtf':
+    if calc_type == 'ddtf':
+        for i,j in ij:
+            count += 1
+            if count%10==0:
+                progressCallback(count/N, 'Computing coherences')
             f, final = ddtf2.do_ddtf_single_loop(Pxx[i],Pxx[j],sample_rate=Fs,duration=duration)
-        elif calc_type == 'correlation':
-            if shape == None:
-                shape = make_wave(newLength,Fs)
-                assert(len(shape) == newLength)
-            final = np.correlate(Pxx[i],shape)
-            f = Fs/NFFT*np.arange(numFreqs)
-        Cxy[i,j] = final # max((result, rev_result))
-        Phase[i,j] = final
-        print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
+            Cxy[i,j] = final # max((result, rev_result))
+            Phase[i,j] = final
+
+    elif calc_type == 'correlation':
+        if shape == None:
+            shape = make_wave(newLength,Fs)    
+        assert(len(shape) == newLength)
+        calculated = {}
+        for i,j in ij:
+            if i in calculated:
+                Cxy[i,j] = calculated[i]
+                Phase[i,j] = calculated[i]
+            else:
+                calculated[i],p = pearsonr(Pxx[i],shape)
+                Cxy[i,j] = calculated[i]
+                Phase[i,j] = calculated[i]
+        # print "FINAL: ", final
+        f = Fs/newLength*np.arange(numFreqs)
+        
+
+        # print "NFFT, NUMFREQS: ", NFFT, numFreqs, oldNFFT
     freqs = f # Fs/NFFT*np.arange(numFreqs)
     print "FREQS ARE: ", freqs
     return Cxy, Phase, freqs
