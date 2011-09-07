@@ -289,6 +289,8 @@ def do_ddtf_single_loop(el1,el2,sample_rate=500,duration=20):
     sumS2 = S21 + S22 #  + S23
 
     NS12 = S12 / sumS
+    if sumS2[0][0] == 0.0:
+        NS12 = NS12 * 0
     NS21 = S21 / sumS2 # possibly do something with this?
 
     return f,NS12[0]
