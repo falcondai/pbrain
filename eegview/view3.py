@@ -89,6 +89,7 @@ from image_manager import ImageManager
 from grid_manager import GridManager
 from mesh_manager import MeshManager
 from coh_explorer import CohExplorer
+from wavelet_runner import WaveletRunner
 import granger
 import ddtf2
 
@@ -418,6 +419,12 @@ class View3(gtk.Window, Observer):
             ce = CohExplorer(self.eoi, self.eeg.freq)
             ce.show()
                 
+	def wavelet_runner(button, *args):
+            tmin, tmax = self.eegplot.get_time_lim()
+            t, data = self.eeg.get_data(tmin, tmax)
+            wr = WaveletRunner(self.eoi, self.eeg.freq, t,data)
+            wr.show()
+
 	self.buttonRange = gtk.CheckButton()
         self.buttonRange.set_active(False)
 
@@ -540,6 +547,7 @@ class View3(gtk.Window, Observer):
         self.add_toolbutton1(toolbar1, gtk.STOCK_SELECT_COLOR, 'Voltage map', 'Private', self.voltage_map)
         self.add_toolbutton1(toolbar1, gtk.STOCK_PROPERTIES, 'Coher. norm. wndw', 'Private', self.compute_norm_over_range)
         self.add_toolbutton1(toolbar1, gtk.STOCK_PROPERTIES, 'Coh. Explorer', 'Private', coh_explore)
+	self.add_toolbutton1(toolbar1, gtk.STOCK_PROPERTIES, 'Wavelet Runner', 'Private', wavelet_runner)
         
         self.add_separator(toolbar1)
         self.add_toolbutton1(toolbar1, gtk.STOCK_PROPERTIES, 'Set camera', 'Private', self.control_camera)

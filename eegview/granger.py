@@ -255,7 +255,7 @@ def ddtf_test(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, progressCallback=d
 
     elif calc_type == 'correlation':
         if shape == None:
-            shape = make_wave2(newLength,Fs)    
+            shape = make_wave3(newLength,Fs)    
         assert(len(shape) == newLength)
         calculated = {}
         for i,j in ij:
@@ -283,7 +283,7 @@ def make_wave(newLength,eegfreq):
     newLength_t = newLength * 1.0/eegfreq
     # want the freq of the wave to be 4 per length in points
     t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
-    modifier = 22.0/newLength_t
+    modifier = 7.0/newLength_t
     freq_array = np.arange(modifier,modifier/2,-((modifier)/(newLength*2)))
     wave = np.cos(2.0*np.pi*freq_array*t)
     return wave
@@ -293,9 +293,19 @@ def make_wave2(newLength,eegfreq):
     newLength_t = newLength * 1.0/eegfreq
     # want the freq of the wave to be 4 per length in points
     t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
-    modifier = 22.0/newLength_t
+    modifier = 7.0/newLength_t
     freq_array = np.arange(modifier,modifier/2,-((modifier)/(newLength*2)))
     wave = np.cos(2.0*np.pi*(modifier - modifier/2)*t)
+    return wave
+
+def make_wave3(newLength,eegfreq):
+    srate = eegfreq
+    newLength_t = newLength * 1.0/eegfreq
+    # want the freq of the wave to be 4 per length in points
+    t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
+    modifier = 7.0/newLength_t
+    freq_array = np.arange(modifier/2,modifier,((modifier)/(newLength*2)))
+    wave = np.cos(2.0*np.pi*freq_array*t)
     return wave
 
 def granger_test2(X, ij, newLength=256, NFFT=256, offset=0, Fs=2, maxlag=3, progressCallback=donothing_callback, window=window_hanning, noverlap=0, detrend = detrend_none, gv1=0,gv2=0):
@@ -547,16 +557,16 @@ class DDTF():
 
 
     def make_wave(self, newLength,eegfreq):
-        srate = eegfreq
+        srate = eegfreq*10
         newLength_t = newLength * 1.0/eegfreq
         # want the freq of the wave to be 4 per length in points
         t = np.arange(0,newLength_t,1.0/srate) # time axis in seconds
-        modifier = 15.0/newLength_t
-        freq_array = np.arange(modifier,modifier/2,-((modifier)/(newLength*2)))
+        modifier = 7.0/newLength_t
+        freq_array = np.arange(modifier/2,modifier,((modifier)/(newLength*2))/10)
         # if len(freq_array) > len(t):
             # freq_array=freq_array[0,len(t)]
         print t, np.pi, freq_array
-        wave = np.cos(2.0*np.pi*(modifier - modifier/2)*t)
+        wave = np.cos(2.0*np.pi*freq_array*t)
         print wave
         self.ax1.plot(t,wave)
         self.ax10.plot(self.e1)
@@ -696,6 +706,6 @@ class DDTF():
 
 def start_ddtf():
     d = DDTF()
-    d.make_wave(128,500)
+    d.make_wave(20,500)
     # d.ddtf(d.e1,d.e2,d.e3)
     d.win.show()

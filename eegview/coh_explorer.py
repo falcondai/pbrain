@@ -1,5 +1,5 @@
 from __future__ import division
-import sys, os, math, copy, gc
+import sys, os, math, gc,copy
 import pylab as p
 import vtk
 
@@ -10,8 +10,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
-import copy
-import math
+
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
 from matplotlib.backends.backend_gtkagg import NavigationToolbar
 from matplotlib.figure import Figure
@@ -524,7 +523,7 @@ class CohExplorer(gtk.Window, Observer):
         counter = 0
         xdata = []
         ydata = []
-        
+        average = {"avg":0,"total":0}
         
         #print "chankeys: ", self.t_data[0]
         for i in self.t_data[0]: #go through the ordered channel list one by one
@@ -555,7 +554,8 @@ class CohExplorer(gtk.Window, Observer):
                     (ns,ss) = self.t_data[t][i] #get the data out
                     ssband = ss[col] #choose the band
                     x1 = ssband/ns #find the average
-                    
+                    average["avg"] += abs(x1)
+                    average["total"] += 1
                     if self.opt == 'phase':
                         x1 = abs((x1*180)/math.pi)
                     
@@ -609,4 +609,5 @@ class CohExplorer(gtk.Window, Observer):
         self.ax.patch.set_facecolor('black') #black bg
         #self.ax.set_ylim(bottom=.35,top=.75, auto=False)
         self.progBar.set_fraction(0)
+        print "AVERAGE IS: ", float(average["avg"]) / float(average["total"])
         return
