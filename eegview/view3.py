@@ -422,7 +422,7 @@ class View3(gtk.Window, Observer):
 	def wavelet_runner(button, *args):
             tmin, tmax = self.eegplot.get_time_lim()
             t, data = self.eeg.get_data(tmin, tmax)
-            wr = WaveletRunner(self.eoi, self.eeg.freq, t,data)
+            wr = WaveletRunner(self.eoi, self.eeg.freq, t,data,self.NFFT,self.offset,self.newLength)
             wr.show()
 
 	self.buttonRange = gtk.CheckButton()
