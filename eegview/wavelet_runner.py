@@ -13,6 +13,7 @@ from matplotlib import axes
 from matplotlib.widgets import Cursor
 import mpl_toolkits.mplot3d.axes3d as p3
 from events import Observer
+import copy
 from pbrainlib.gtkutils import error_msg, simple_msg, make_option_menu,\
      get_num_value, get_num_range, get_two_nums, str2int_or_err,\
      OpenSaveSaveAsHBox, ButtonAltLabel, str2num_or_err, exception_to_str
@@ -26,7 +27,9 @@ class WaveletRunner(gtk.Window, Observer):
         self.choose_file()
         self.channels = eoi
         self.selected_channels = []
-        self.wavelets = {} # wavelets is a dict from name to np array
+        # wavelets is a dict from name to np array
+        self.wavelets = {}
+        self.selected_wavelets = []
         self.eegfreq = freq
         self.t = t # an array of ms exactly indexed into self.data[0]
         self.trial_length = trial_length
@@ -51,6 +54,11 @@ class WaveletRunner(gtk.Window, Observer):
         buttonChans.show()
         buttonChans.connect('clicked', self.load_chans)
         
+        buttonWB = gtk.Button("Wavelet Toolbox")
+        buttonWB.show()
+        buttonWB.connect('clicked', self.load_wavelets)
+        
+        
         buttonPlot = gtk.Button(stock=gtk.STOCK_EXECUTE)
         buttonPlot.show()
         buttonPlot.connect('clicked', self.execute)
@@ -74,6 +82,7 @@ class WaveletRunner(gtk.Window, Observer):
         hbox.set_spacing(3)
         vbox.pack_start(hbox, False, False)
         hbox.pack_start(buttonChans, False, False)
+        hbox.pack_start(buttonWB, False, False)
         hbox.pack_start(buttonPlot, False, False)
         hbox.pack_start(lwindow, False, False)
         hbox.pack_start(self.window_length_entry, False, False)
@@ -125,7 +134,7 @@ class WaveletRunner(gtk.Window, Observer):
         f = open(self.save_file,'ab')
         self.window_length = float(self.window_length_entry.get_text())
         self.modval = float(self.modval_entry.get_text())
-        self.wavelets = wavelet_creator.create_all(self.window_length,self.eegfreq,self.modval)
+        
         if self.selected_channels == []:
             channels = range(len(self.channels))
         else:
@@ -138,12 +147,52 @@ class WaveletRunner(gtk.Window, Observer):
             for channel in channels:
                 thisSlice = self.data[entry:(entry+self.window_length),channel]
                 # print "CHANNEL: ", channel, "THISSLICE: \n", thisSlice,
-                for wavelet in self.wavelets:
+                for wavelet in self.selected_wavelets:
                     assert(len(self.wavelets[wavelet]) == len(thisSlice))
                     result,p = pearsonr(thisSlice,self.wavelets[wavelet])
                     self.write_line(f,self.channels[channel], wavelet, self.t[entry],self.window_length,result)
                     print result
         f.close
+
+    def load_wavelets(self, button):
+        self.window_length = float(self.window_length_entry.get_text())
+        self.modval = float(self.modval_entry.get_text())
+        self.wavelets = wavelet_creator.create_all(self.window_length,self.eegfreq,self.modval)
+        dlg = gtk.Dialog("Wavelet Manipulation")
+        dlg.connect("destroy", dlg.destroy)
+        dlg.set_size_request(400,400)
+        scrolled_window = gtk.ScrolledWindow(None, None)
+        scrolled_window.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        dlg.vbox.pack_start(scrolled_window, True, True, 0)
+        scrolled_window.show()
+
+        table = gtk.Table(2,(1+len(self.wavelets)))
+        table.set_row_spacings(8)
+        table.set_col_spacings(8)
+        scrolled_window.add_with_viewport(table)
+        table.show()
+        #attach format: obj, beg end x, beg end y
+        l1 = gtk.Label("show            wavelet")
+        l1.show()
+
+        table.attach(l1,0,1,0,1)
+        #an array to control the check boxes
+        buttons = {}
+        counter = 0
+        for i in self.wavelets.keys():
+            s1 = "                %s" % (i,)
+            buttons[i] = gtk.CheckButton(s1)
+            buttons[i].show()
+            if i in self.selected_wavelets:
+                buttons[i].set_active(True) #reactivate previously active wavelets
+            buttons[i].connect("toggled", self.waveswitch, i)
+            table.attach(buttons[i], 0,1,counter+1,counter+2)
+            counter += 1
+        butOK = gtk.Button("OK")    
+        butOK.connect('clicked', (lambda b, x: x.destroy()), dlg)
+        butOK.show()
+        dlg.vbox.pack_start(butOK, False, False)
+        dlg.show()
 
     def load_chans(self, button):
         dlg = gtk.Dialog("Channel Manipulation")
@@ -186,3 +235,9 @@ class WaveletRunner(gtk.Window, Observer):
             self.selected_channels.append(self.channels.index(channelnum))
         else:
             self.selected_channels.remove(self.channels.index(channelnum))
+    def waveswitch(self, widget, label):
+        print label
+        if widget.get_active():
+            self.selected_wavelets.append(label)
+        else:
+            self.selected_wavelets.remove(label)
