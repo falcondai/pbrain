@@ -532,8 +532,8 @@ class View3(gtk.Window, Observer):
                         range_toggled()
                     else:
                         self.eegplot.set_time_lim(
-                            ms2points(int(self.etimemin.get_text()),eegfreq)/1000,
-                            ms2points(int(self.etimemax.get_text()),eegfreq)/1000, 
+                            int(self.etimemin.get_text())/1000,
+                            int(self.etimemax.get_text())/1000, 
                             True, True) #the last true sends to the observer
                     dlg2.destroy()
                     break

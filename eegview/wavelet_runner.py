@@ -67,7 +67,7 @@ class WaveletRunner(gtk.Window, Observer):
         lwindow.set_text("window in ms")
         lwindow.show()
         self.window_length_entry = gtk.Entry()
-        self.window_length_entry.set_text(str(window_length))
+        self.window_length_entry.set_text(str((window_length/float(self.eegfreq))*1000))
         self.window_length_entry.show()
 
         lmod = gtk.Label()
@@ -127,14 +127,18 @@ class WaveletRunner(gtk.Window, Observer):
 
 
     def write_line(self,f, channel_name, wavelet_name, time_start, window_length, result):
+        channel_name = '-'.join(str(channel_name)[1:-1].split(','))
         print >> f, "%s,%s,%f,%d,%f" %(channel_name,wavelet_name,time_start,window_length,result)
+
+    def ms2points(self,val):
+        return (float(val)*self.eegfreq) / 1000.0
 
     def execute(self,button):
         file(self.save_file,'wb').write('')
         f = open(self.save_file,'ab')
-        self.window_length = float(self.window_length_entry.get_text())
+        self.window_length = self.ms2points(float(self.window_length_entry.get_text()))
         self.modval = float(self.modval_entry.get_text())
-        
+        self.window_length_ms = float(self.window_length_entry.get_text())
         if self.selected_channels == []:
             channels = range(len(self.channels))
         else:
@@ -150,12 +154,12 @@ class WaveletRunner(gtk.Window, Observer):
                 for wavelet in self.selected_wavelets:
                     assert(len(self.wavelets[wavelet]) == len(thisSlice))
                     result,p = pearsonr(thisSlice,self.wavelets[wavelet])
-                    self.write_line(f,self.channels[channel], wavelet, self.t[entry],self.window_length,result)
-                    print result
+                    self.write_line(f,self.channels[channel], wavelet, self.t[entry],self.window_length_ms,result)
+                    # print result
         f.close
 
     def load_wavelets(self, button):
-        self.window_length = float(self.window_length_entry.get_text())
+        self.window_length = float(self.ms2points(self.window_length_entry.get_text()))
         self.modval = float(self.modval_entry.get_text())
         self.wavelets = wavelet_creator.create_all(self.window_length,self.eegfreq,self.modval)
         dlg = gtk.Dialog("Wavelet Manipulation")
