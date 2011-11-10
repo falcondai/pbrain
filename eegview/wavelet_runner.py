@@ -127,8 +127,8 @@ class WaveletRunner(gtk.Window, Observer):
 
 
     def write_line(self,f, channel_name, wavelet_name, time_start, window_length, result):
-        channel_name = '-'.join(str(channel_name)[1:-1].split(','))
-        print >> f, "%s,%s,%f,%d,%f" %(channel_name,wavelet_name,time_start,window_length,result)
+        channel_name = '-'.join(str(channel_name)[1:-1].split(',')).replace("\'","")
+        print >> f, "%s,%s,%f,%d,%f" %(channel_name,wavelet_name,time_start*1000,window_length,result)
 
     def ms2points(self,val):
         return (float(val)*self.eegfreq) / 1000.0
