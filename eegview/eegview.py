@@ -1186,6 +1186,7 @@ class MainWindow(PrefixWrapper):
         self.canvas.mpl_connect('button_press_event', self.button_press_event)
         self.canvas.mpl_connect('button_release_event', self.button_release_event)
 
+
     def update_status_bar(self, msg):
         self.statbar.pop(self.statbarCID) 
         mid = self.statbar.push(self.statbarCID, 'Message: ' + msg)
@@ -2032,6 +2033,8 @@ if __name__=='__main__':
     Shared.windowMain.widget.connect('destroy', update_rc_and_die)
     Shared.windowMain.widget.connect('delete_event', update_rc_and_die)
     #Shared.windowMain['menubarMain'].hide()
+    # chain in the eeg file loading right away!
+    Shared.windowMain.on_menuFileOpen_activate(None)
     try: gtk.main()
     except KeyboardInterrupt:
         update_rc_and_die()
