@@ -1636,11 +1636,14 @@ class MainWindow(PrefixWrapper):
 
     def autoload(self, options):
         """DEBUG only"""
-        fullpath = options.filename
-        basename, ext = os.path.splitext(fullpath)
-        eeg = extmap[ext](fullpath)
-        self.load_eeg(eeg)
-
+        if options.filename != None:
+            fullpath = options.filename
+            basename, ext = os.path.splitext(fullpath)
+            eeg = extmap[ext](fullpath)
+            self.load_eeg(eeg)
+        self.coh_autoload = options.coh
+        self.wavelet_autoload = options.wavelet
+        
         if options.eoi is not None:
             eoi = EOI(useFile=options.eoi)
             self.load_eoi(eoi)
@@ -1725,7 +1728,8 @@ class MainWindow(PrefixWrapper):
                 parent=self.widget)
             return
         from view3 import View3
-        viewWin = View3(eegplot=self.eegplot)
+        print "self.coh_autoload: %s %s"%(self.coh_autoload, self.wavelet_autoload)
+        viewWin = View3(eegplot=self.eegplot,coh_autoload=self.coh_autoload,wavelet_autoload=self.wavelet_autoload)
 	
         if viewWin.ok:
             viewWin.show()
@@ -2004,13 +2008,23 @@ if __name__=='__main__':
                       default=None,                      
                       help="Autoload eoi from eoi file", metavar="FILE")
 
+    parser.add_option("-c", "--coh_explore",
+                      action="store_true", dest="coh",
+                      default=False,                      
+                      help="run straight to coh explorer")
+
+    parser.add_option("-w", "--wavelet_runner",
+                      action="store_true", dest="wavelet",
+                      default=False,                      
+                      help="run straight to wavelet runner")
+
 
     (options, args) = parser.parse_args()
-
-
+    
     if options.filename is not None:
         Shared.windowMain.autoload(options)
     else:
+        Shared.windowMain.autoload(options)
         #No longer load the sql/zope dialog.
         #Shared.windowMain.on_menuFilePreferences_activate(None)
         pass

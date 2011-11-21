@@ -116,7 +116,7 @@ class View3(gtk.Window, Observer):
     banddict =  {'delta':0, 'theta':1, 'alpha':2,
                  'beta':3, 'gamma':4, 'high':5}
 
-    def __init__(self, eegplot):
+    def __init__(self, eegplot,coh_autoload=False,wavelet_autoload=False):
         """
         View3 Initialization:
 
@@ -290,22 +290,16 @@ class View3(gtk.Window, Observer):
         # csv_save_electrodes: when saving coherence to EEG, which ones to save
         
         self.csv_save_electrodes = None
-
+	
+	if wavelet_autoload:
+            tmin, tmax = self.eegplot.get_time_lim()
+            t, data = self.eeg.get_data(tmin, tmax)
+            wr = WaveletRunner(self.eoi, self.eeg.freq, t,data,self.NFFT,self.offset,self.newLength)
+            wr.show()
+	if coh_autoload:
+            ce = CohExplorer(self.eoi, self.eeg.freq)
+            ce.show()
     
-    #currently not used, will take out soon -eli    
-    """    
-    def disable_overlay_interact(self, *args):
-        #figure out where we clicked
-        x,y = self.interactor.GetEventPosition()
-        if self.overlayRenderer.IsInViewport(x,y):
-            #don't let the camera move
-            cam = self.overlayRenderer.GetActiveCamera()
-            cam.SetViewUp(0,1,0)
-            cam.SetFocalPoint(15.086358767571982, 4.6935338388001755, 0.0)
-            cam.SetPosition(15.086358767571982, 4.6935338388001755, 12.533026371713074)
-            self.importer.Update()
-    """
-
     def set_eoi(self, eoi):
         self.eoi = eoi
         self.cohCache = None
