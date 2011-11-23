@@ -1,15 +1,16 @@
 import nifti
 #from nifti import *
-import Numeric
+import numpy
 import vtk
 import os
-from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
+# from vtk.util.vtkImageImportFromArray import vtkImageImportFromArray
+from vtk.util import numpy_support
 
 class vtkNiftiImageReader(object):
     __defaultFilePattern=""#"dti_FA"
 
     def __init__(self):
-        self.__vtkimport=vtkImageImportFromArray()
+        self.__vtkimport=numpy_support.numpy_to_vtk() #vtkImageImportFromArray()
         self.__filePattern=self.__defaultFilePattern
         self.__data = None
 
@@ -39,7 +40,7 @@ class vtkNiftiImageReader(object):
         #del self.__nim
         #XXX the conversion to Numeric could be very expensive
         #think about it...
-        self.__vtkimport.SetArray(Numeric.array(self.__data))
+        self.__vtkimport.SetArray(numpy.array(self.__data))
         self.SetDataSpacing(self.__nim.getVoxDims())#to reverse: [::-1]
         #XXX this is all not 100% right...
         #the data in array is z,y,x
