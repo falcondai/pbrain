@@ -1839,8 +1839,8 @@ class GridManager:
                 trodes.append( (gnum, gname, marker) )
 
         if len(trodes) != N:
-            error_msg('%s grid requires %d electrodes; only found %d' %
-                      (numrows, numcols), N, len(trodes))
+            error_msg('%s grid requires %d electrodes; found %d' %
+                      (str((numrows, numcols)), N, len(trodes)))
             return None
 
         trodes.sort() # sort by number
