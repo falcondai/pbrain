@@ -2,13 +2,10 @@ import sys, os, re
 import gtk, gobject, pygtk
 pygtk.require('2.0')
 
-
-from matplotlib.numerix import arange
-
 from matplotlib.cbook import exception_to_str
 from matplotlib.mlab import detrend_none, detrend_mean, detrend_linear,\
      window_none, fftsurr, window_hanning, prctile #took out mean
-import matplotlib.numerix as nx
+import numpy as nx
 from scipy import mean
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
 from matplotlib.backends.backend_gtk import NavigationToolbar2GTK
@@ -3936,7 +3933,7 @@ class AutoPlayDialog(gtk.Dialog, Observer):
         valStep = (valStep/1000)*self.eegfreq
         newLength = (self.newLength/1000)*self.eegfreq
 
-        self.steps = arange(valMin, valMax-newLength+0.001, valStep)
+        self.steps = nx.arange(valMin, valMax-newLength+0.001, valStep)
         #so if scalar data is driving, self.newlength = self.twidth
         #but otherwise, we want the last step to be no less than newlength from the end of the sweep length
         #where valmax is passed in as sweep length from the NFFT var in view3
