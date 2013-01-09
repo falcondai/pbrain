@@ -21,30 +21,23 @@ class MeshManager:
         self.interactor = interactor
         self.renderer = renderer
 
-        reader = vtk.vtkStructuredPointsReader()
+        #reader = vtk.vtkStructuredPointsReader()
+        reader = vtk.vtkDataSetReader()
         reader.SetFileName(mesh_filename)
 
-        cf = vtk.vtkContourFilter()
-        cf.SetInput(reader.GetOutput())
-        cf.SetValue(0, 1)
-        deci = vtk.vtkDecimatePro()
-        deci.SetInput(cf.GetOutput())
-        deci.SetTargetReduction(.1)
-        deci.PreserveTopologyOn()
-
-
-        smoother = vtk.vtkSmoothPolyDataFilter()
-        smoother.SetInput(deci.GetOutput())
-        smoother.SetNumberOfIterations(100)
-
-        normals = vtk.vtkPolyDataNormals()
-        normals.SetInput(smoother.GetOutput())
-        normals.FlipNormalsOn()
-        normals.SetFeatureAngle(60.0)
-
-        stripper = vtk.vtkStripper()
-        stripper.SetInputConnection(normals.GetOutputPort())
-
+        # handle volume and surface data set separately
+        strip = None
+        if reader.IsFileStructuredPoints():
+            print 'Structured points input. Generating surface from volume data.'
+            strip = self.mesh_from_vol(reader.GetStructuredPointsOutput())
+        elif reader.IsFilePolyData():
+            print 'Poly data input.'
+            strip = self.mesh_from_surf(reader.GetPolyDataOutput())
+        else:
+            print 'Unsupported file format. Only polydata or structured points are supported.'
+        
+        if not strip:
+            return
 
         lut = vtk.vtkLookupTable()
         lut.SetHueRange(0, 0)
@@ -53,7 +46,7 @@ class MeshManager:
         
         contourMapper = vtk.vtkPolyDataMapper()
         #contourMapper.SetInput(normals.GetOutput())
-        contourMapper.SetInput(stripper.GetOutput())
+        contourMapper.SetInput(strip)
         contourMapper.SetLookupTable(lut)
 
         self.contours = vtk.vtkActor()
@@ -61,9 +54,10 @@ class MeshManager:
         #self.contours.GetProperty().SetRepresentationToWireframe()
         self.contours.GetProperty().SetRepresentationToSurface()
         #self.contours.GetProperty().SetInterpolationToGouraud()
-        #self.contours.GetProperty().SetOpacity(1.0)
+        self.contours.GetProperty().SetOpacity(1.0)
         #self.contours.GetProperty().SetAmbient(0.1)
-        self.contours.GetProperty().SetDiffuse(0.1)
+        #self.contours.GetProperty().SetDiffuse(0.1)
+        self.contours.GetProperty().SetColor(0.9, 0.9, 0.9)
         #self.contours.GetProperty().SetSpecular(0.1)
         #self.contours.GetProperty().SetSpecularPower(0.1)
 
@@ -87,5 +81,36 @@ class MeshManager:
         # XXX YAH somehow get a callback when actor is moved...
         
         self.renderer.AddActor(self.contours)
-        
-        
+
+    def mesh_from_vol(self, structured_points):
+        cf = vtk.vtkContourFilter()
+        cf.SetInput(structured_points)
+        cf.SetValue(0, 1)
+        deci = vtk.vtkDecimatePro()
+        deci.SetInput(cf.GetOutput())
+        deci.SetTargetReduction(.1)
+        deci.PreserveTopologyOn()
+
+        smoother = vtk.vtkSmoothPolyDataFilter()
+        smoother.SetInput(deci.GetOutput())
+        smoother.SetNumberOfIterations(100)
+
+        normals = vtk.vtkPolyDataNormals()
+        normals.SetInput(smoother.GetOutput())
+        #normals.FlipNormalsOn()
+        normals.SetFeatureAngle(60.0)
+
+        stripper = vtk.vtkStripper()
+        stripper.SetInputConnection(normals.GetOutputPort())
+
+        return stripper.GetOutput()
+
+    def mesh_from_surf(self, poly_data):
+        normals = vtk.vtkPolyDataNormals()
+        normals.SetInput(poly_data)
+        normals.SetFeatureAngle(60.0)
+        stripper = vtk.vtkStripper()
+        stripper.SetInputConnection(normals.GetOutputPort())
+
+        return stripper.GetOutput()
+
