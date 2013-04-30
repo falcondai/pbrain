@@ -214,19 +214,13 @@ class ArrayMapper(gtk.Window, ScalarMapper, Observer):
             print "ArrayMapper.make_fig(): channel is ", channel
             print "ArrayMapper.make_fig(): self.numSamples=", self.numSamples
 
-            time_range = arange(self.numSamples)
-            #print "start_time= ", start_time, "end_time =", end_time
-            if ((start_time != None) & (end_time != None)):
-                time_range = arange(start_time, end_time, (end_time - start_time)/self.numSamples)
-            
-            #print "time_range is ", time_range
             x = self.X[channel-1,:]
             if minx > min(x):
                 minx = copy.deepcopy(min(x))
             if maxx < max(x):
                 maxx = copy.deepcopy(max(x))
             color = colordict[((i-1)%7)]
-            newp = self.ax.plot(time_range, x, color, label=("channel " + str(i+1)))
+            newp = self.ax.plot(x, color, label=("channel " + str(i+1)))
             newp[0].set_linewidth(4)
             graph.append(newp)
             
