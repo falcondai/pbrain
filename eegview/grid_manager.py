@@ -819,10 +819,14 @@ class GridManager:
                 if ((curr_grid_name not in grid1_names) & (curr_grid_name not in grid2_names)):
                     grid_names = ', ' . join(['%s ' % key for key in grid1_names]) + ', '
                     grid_names += (', ' . join(['%s ' % key for key in grid2_names]))
-                    error_msg('key %s not in list of grid names: %s' % (curr_grid_name, grid_names))
-                    return
+                    #error_msg('key %s not in list of grid names: %s' % (curr_grid_name, grid_names))
+                    #return
             
-            am = ArrayMapper(self, self.X, channels, self.ampAscii, self.addview3, self.view3, start_time=start_time, end_time=end_time)
+            am = None
+            if start_time != '':
+                am = ArrayMapper(self, self.X, channels, self.ampAscii, self.addview3, self.view3, start_time=start_time, end_time=end_time)
+            else:
+                am = ArrayMapper(self, self.X, channels, self.ampAscii, self.addview3, self.view3)
             #here, we'll try to preemptively load a colormap if the .eegviewrc file has been set.
             self.set_custom_colormap()
             
@@ -936,13 +940,13 @@ class GridManager:
 
         entry = gtk.Entry()
         entry.show()
-        entry.set_text('0')
+        #entry.set_text('0')
         entry.set_width_chars(5)
         hbox.pack_start(entry, False, False)
         entry_start_time = entry
         entry = gtk.Entry()
         entry.show()
-        entry.set_text(str((self.view3.NFFT/self.view3.eeg.freq) * 1000))
+        #entry.set_text(str((self.view3.NFFT/self.view3.eeg.freq) * 1000))
         entry.set_width_chars(5)
         hbox.pack_start(entry, False, False)
         entry_end_time = entry

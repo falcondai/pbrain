@@ -51,8 +51,8 @@ class ArrayMapper(gtk.Window, ScalarMapper, Observer):
         self.addview3destroy = False
 
         self.time_in_secs = False
-        self.start_time = None
-        self.end_time = None
+        self.start_time = 0
+        self.end_time = self.numSamples
         if ((start_time != None) & (end_time != None)) :
             self.time_in_secs = True
             self.start_time = start_time
@@ -88,8 +88,7 @@ class ArrayMapper(gtk.Window, ScalarMapper, Observer):
         scrollbar.show()
         hbox.pack_start(scrollbar, True, True)
         
-        
-        if (self.time_in_secs == True):
+        if self.time_in_secs:
             scrollbar.set_range(start_time, end_time)
             #scrollbar.set_increments(1,1)
             print "set_increments(%f, %f)" % ((end_time-start_time)/float(self.numSamples), (end_time-start_time)/float(self.numSamples))

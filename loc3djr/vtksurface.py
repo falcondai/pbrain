@@ -5,7 +5,7 @@ from events import EventHandler
 class VTKSurface(vtk.vtkActor):
     """
     CLASS: VTKSurface
-    DESCR: Handles a .vtk structured points file.
+    DESCR: Handles a .vtk structured points (volume) or polydata (surface) file.
     """
 
     def set_matrix(self, registration_mat):
@@ -36,14 +36,28 @@ class VTKSurface(vtk.vtkActor):
         self.Modified()
         # how do we like update the render tree or somethin..
         self.renderer.Render()
-   
+
     def __init__(self, filename, renderer):
 
         self.renderer = renderer
         
-        reader = vtk.vtkStructuredPointsReader()
+        reader = vtk.vtkDataSetReader()
         #reader.SetFileName('/home/mcc/src/devel/extract_mri_slices/braintest2.vtk')
         reader.SetFileName(filename)
+
+        strip = None
+        if reader.IsFileStructuredPoints():
+            print 'Structured points input. Generating surface from volume data.'
+            strip = self.mesh_from_vol(reader.GetStructuredPointsOutput())
+        elif reader.IsFilePolyData():
+            print 'Poly data input.'
+            strip = self.mesh_from_surf(reader.GetPolyDataOutput())
+        else:
+            print 'Unsupported file format. Only polydata or structured points are supported.'
+        
+        if not strip:
+            return
+
 
         # we want to move this from its (.87 .92 .43) esque position to something more like 'the center'
         # how to do this?!?
@@ -51,7 +65,7 @@ class VTKSurface(vtk.vtkActor):
         # ALTERNATIVELY: we want to use vtkInteractorStyleTrackballActor
         # somewhere instead of the interactor controlling the main window and 3 planes
         
-
+        '''
         imagedata = reader.GetOutput()
 
         #reader.SetFileName(filename)
@@ -96,6 +110,7 @@ class VTKSurface(vtk.vtkActor):
         #normals.SetInput(transformFilter.GetOutput())
         normals.SetInput(smoother.GetOutput())
         normals.FlipNormalsOn()
+        '''
 
         """
         tags = vtk.vtkFloatArray()
@@ -110,11 +125,8 @@ class VTKSurface(vtk.vtkActor):
         lut.SetSaturationRange(0, 0)
         lut.SetValueRange(0.2, 0.55)
         
-        
-
         contourMapper = vtk.vtkPolyDataMapper()
-        contourMapper.SetInput(normals.GetOutput())
-
+        contourMapper.SetInputConnection(strip.GetOutputPort())
         contourMapper.SetLookupTable(lut)
 
         ###contourMapper.SetColorModeToMapScalars()
@@ -151,3 +163,34 @@ class VTKSurface(vtk.vtkActor):
         ######################################################################
         ######################################################################
 
+    def mesh_from_vol(self, structured_points):
+        cf = vtk.vtkContourFilter()
+        cf.SetInput(structured_points)
+        cf.SetValue(0, 1)
+        deci = vtk.vtkDecimatePro()
+        deci.SetInput(cf.GetOutput())
+        deci.SetTargetReduction(.1)
+        deci.PreserveTopologyOn()
+
+        smoother = vtk.vtkSmoothPolyDataFilter()
+        smoother.SetInput(deci.GetOutput())
+        smoother.SetNumberOfIterations(100)
+
+        normals = vtk.vtkPolyDataNormals()
+        normals.SetInput(smoother.GetOutput())
+        #normals.FlipNormalsOn()
+        normals.SetFeatureAngle(60.0)
+
+        stripper = vtk.vtkStripper()
+        stripper.SetInputConnection(normals.GetOutputPort())
+
+        return stripper
+
+    def mesh_from_surf(self, poly_data):
+        normals = vtk.vtkPolyDataNormals()
+        normals.SetInput(poly_data)
+        normals.SetFeatureAngle(60.0)
+        stripper = vtk.vtkStripper()
+        stripper.SetInputConnection(normals.GetOutputPort())
+
+        return stripper
