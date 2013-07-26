@@ -677,7 +677,12 @@ def cohere_pairs( X, ij, newLength = 256, NFFT=256, offset = 0, Fs=2, detrend=de
         Pxy /= normVal
         
         #Cxy[(i,j)] = np.divide(np.absolute(Pxy)**2, Pxx[i]*Pxx[j])
-        Cxy[i,j] = abs(Pxy)**2 / (Pxx[i]*Pxx[j])
+        try:
+          Cxy[i,j] = abs(Pxy)**2 / (Pxx[i]*Pxx[j])
+        except:
+          # division by zero (zero channel)
+          Cxy[i,j] = Pxy * 0.
+          #import pdb; pdb.set_trace()
         Phase[i,j] =  np.arctan2(Pxy.imag, Pxy.real)
         #print "debug: ", i, j, Cxy[i,j]
     
