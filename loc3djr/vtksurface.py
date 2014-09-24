@@ -138,10 +138,10 @@ class VTKSurface(vtk.vtkActor):
         #self.contours.GetProperty().SetRepresentationToWireframe()
         #elif (do_surface):
         self.contours.GetProperty().SetRepresentationToSurface()
-        self.contours.GetProperty().SetInterpolationToGouraud()
+        self.contours.GetProperty().SetInterpolationToPhong()
         self.contours.GetProperty().SetOpacity(1.0)
-        self.contours.GetProperty().SetAmbient(0.1)
-        self.contours.GetProperty().SetDiffuse(0.1)
+        self.contours.GetProperty().SetAmbient(0.2)
+        self.contours.GetProperty().SetDiffuse(0.5)
         self.contours.GetProperty().SetSpecular(0.1)
         self.contours.GetProperty().SetSpecularPower(0.1)
 

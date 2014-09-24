@@ -51,15 +51,13 @@ class MeshManager:
 
         self.contours = vtk.vtkActor()
         self.contours.SetMapper(contourMapper)
-        #self.contours.GetProperty().SetRepresentationToWireframe()
         self.contours.GetProperty().SetRepresentationToSurface()
-        #self.contours.GetProperty().SetInterpolationToGouraud()
+        self.contours.GetProperty().SetInterpolationToPhong()
         self.contours.GetProperty().SetOpacity(1.0)
-        #self.contours.GetProperty().SetAmbient(0.1)
-        #self.contours.GetProperty().SetDiffuse(0.1)
-        self.contours.GetProperty().SetColor(0.9, 0.9, 0.9)
-        #self.contours.GetProperty().SetSpecular(0.1)
-        #self.contours.GetProperty().SetSpecularPower(0.1)
+        self.contours.GetProperty().SetAmbient(0.2)
+        self.contours.GetProperty().SetDiffuse(0.5)
+        self.contours.GetProperty().SetSpecular(0.1)
+        self.contours.GetProperty().SetSpecularPower(0.1)
 
         # now setmatrix() on the actor from the reg file !
 

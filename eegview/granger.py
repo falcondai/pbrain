@@ -7,7 +7,7 @@ import matplotlib
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-from matplotlib.backends.backend_gtkagg import NavigationToolbar
+from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
 from matplotlib.figure import Figure
 import ddtf2
 

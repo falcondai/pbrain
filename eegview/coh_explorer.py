@@ -12,7 +12,7 @@ import gtk
 import gobject
 
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
-from matplotlib.backends.backend_gtkagg import NavigationToolbar
+from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib import axes
 from matplotlib.widgets import Cursor

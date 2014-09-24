@@ -10,7 +10,7 @@ from scipy import array, zeros, ones, sort, absolute, sqrt, divide,\
 
 import gtk, gobject
 from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
-from matplotlib.backends.backend_gtkagg import NavigationToolbar
+from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
 from matplotlib.figure import Figure
 from events import Observer
 

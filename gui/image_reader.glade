@@ -878,6 +878,7 @@
 			      <child>
 				<widget class="GtkEntry" id="entryDFOV">
 				  <property name="visible">True</property>
+				  <property name="tooltip" translatable="yes">The product of in-plane pixel spacing and image dimension</property>
 				  <property name="can_focus">True</property>
 				  <property name="editable">True</property>
 				  <property name="visibility">True</property>
